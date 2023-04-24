@@ -31,7 +31,7 @@
 -- 175 step linear warmup
 -- cosine learning rate decay
 -- same learning rate with gpt3(175B 모델의 경우 0.00006)
--- Adam optimizer with β1 = 0.9, β2 = 0.95,  = 10−8 , and a weight decay coefficient of 0.1
+-- Adam optimizer with β1 = 0.9, β2 = 0.95, ε = 10^−8 , and a weight decay coefficient of 0.1
 -- 1,000 억 개 tokens 학습
 ```
 - Codex-S 
