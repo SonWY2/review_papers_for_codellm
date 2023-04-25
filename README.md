@@ -68,7 +68,7 @@
 <br>
  
 ## 💾[Dataset]
-- [ShareGPT52K]([https://github.com/zilliztech/GPTCache](https://huggingface.co/datasets/RyokoAI/ShareGPT52K))
+- [ShareGPT52K](https://github.com/zilliztech/GPTCache](https://huggingface.co/datasets/RyokoAI/ShareGPT52K)
  
 <br>
 <br>
