@@ -53,6 +53,17 @@
 </div>
 </details>
 
+<details>
+<summary>[GPT4ALL](https://github.com/nomic-ai/gpt4all)</summary>
+
+```
+- 어시스턴트 스타일 대규모 언어모델
+- 수집된 데이터, 데이터 수집 프로시져, 훈련 코드, 최종 모델 가중치 등을 모두 공개
+- GPT 3.5 Turbo로 생성된 800k 데이터(코드/스토리/대화)로 훈련
+- LAION OIG, 스택오버플로우의 코딩 질문, Big-Science/P3 의 명령어 튜닝 등을 기본 데이터 셋으로 활용
+- 스탠포드 알파카 등을 참고하고, 데이터를 ATLAS에 올려서 큐레이션 및 클리닝 진행
+```
+</details>
 <br>
 <br>
  
