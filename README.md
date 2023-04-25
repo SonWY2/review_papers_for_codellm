@@ -67,10 +67,17 @@
 <br>
 <br>
  
+## [Dataset]
+- [ShareGPT52K]([https://github.com/zilliztech/GPTCache](https://huggingface.co/datasets/RyokoAI/ShareGPT52K))
  
+<br>
+<br>
 ## 🎬[Production] 
 - [GPT LLM 질의를 캐싱](https://github.com/zilliztech/GPTCache)
 - [Alpaca .cpp](Alpaca .cpp) c++ native 구현을 통한 inference 가속 
+
+
+
 
 
 
