@@ -1,0 +1,93 @@
+[요약]
+- 13B multilingual 모델 CodeGeeX 공개 (code, checkpoint, API, extensions 전체 공개)
+  - Code는 Apache 2.0 라이센스를 따르나 공개된 checkpoint는 상업용도로 활용 불가
+  - code generation, code completion, code explanation, code translation 작업 지원
+- 23개 프로그래밍 언어에 대해 8,500억 token으로 사전학습
+- HumanEval 벤치마크 데이터에 C++, Java, Javascript, GO 언어를 추가한 HumanEval-X 구축
+- 비슷한 규모의 경쟁 모델들에 비해 성능 이점 확인
+  - multi-lingual 모델은 각 언어의 지식을 동시 저장을 위해 대용량 필요
+  - 모델이 프로그래밍의 핵심적인 지식을 추출하도록 돕는 방법은 여전히 연구 필요. 강력한 일반성은 아직 부족
+  - 추론 잠재력은 뛰어나서 few-shot 기능은 추가적으로 살펴볼 여지가 있음.
+
+[CodeGeeX 모델]
+- 23개 프로그래밍 언어, 13B 사이즈, 8,500억개 토큰
+1) 아키텍처
+https://user-images.githubusercontent.com/36894403/234801911-976a9a93-1396-4dc5-9432-f643a997dcc0.png
+- 기존 Transformer decoder 모델링에서 
+  - 활성화 함수를 FastGELU를 도입하고, 
+  -  최상단에 The Top Query Layer를 추가하여 attention을 활용한 최종 임베딩 획득
+
+2) pre-train 데이터
+- 공개 데이터 셋 : ThePile, CodeParrot
+- 직접 수집한 데이터 셋 : python, java, c++의 보충데이터
+  - Star가 하나 이상
+  - repo 크기가 10MB 이내
+  - 한 줄당 평균 100자 이상 필터링
+  - 자동으로 생성된 파일 필터링
+  - 알파벳 비율이 40% 미만 필터링
+  - 100kb 크기나 1kb 작은 파일 필터링
+  - python code는 PEP8로 포맷팅
+- 학습데이터를 동일한 세그먼트로나눌때,모델이 여러언어를 구분할 수 있도록 세그먼트 앞에 언어 특화 태그 추가
+  - 예: [주석 표시]language: [Lang]   → # language: Python
+- Tokenize
+  - BPE tokenizer 활용
+  - 초기 어휘 크기는 50,000개이며 공백 추가 토큰 추가 
+  - 구체적으로 공백은 (<|extratoken_X|>)로 표현되며, 여기서 X = 8 + L.
+  - 최종 어휘 크기는 v=52,224
+  
+3) Training
+https://user-images.githubusercontent.com/36894403/234827225-913c76c1-2360-47f1-acd6-995b33b071ed.png
+- Ascent 910 AI(32GB) 프로세서에서 학습됨.
+- 192개 노드, 1,536 AI Processor로 2개월 소요
+- 5회 이상 epoch(213,000 step), 850억 토큰 소비
+- ZeRO-2 최적화 활용, micro batch size = 16
+- model weight는 FP16이지만 Layer Norm, Softmax에는 정밀도를 위해 FP32
+https://user-images.githubusercontent.com/36894403/234827978-83d485e0-7d53-4982-a391-b6695a0c4bcd.png
+
+
+4) Fast Inference
+- Quantization 활용. 모든 linear transformation의 가중치 W를 FP16 → INT8로 변환.
+- 메모리 소비량 ~26.9GB 에서 ~14.7GB로 (45.4%) 감소
+- Nvidia의 FastTrans도 활용하여 Layer Fusion, GEMM autotuning, Hardware-accelerate 기능 활용.
+- INT8 가중치와 FP16 가중치 간의 혼합 정밀도 행렬곱을 가속화하는 커스텀 커널도 구현
+- 결과: token 당 13ms (1.61초/128token)
+https://user-images.githubusercontent.com/36894403/234831106-3a8d3acb-1bf9-403a-9b22-60bafdd9423f.png
+- Quantization은 성능에 약간의 영향만 미침
+https://user-images.githubusercontent.com/36894403/234831329-6e5f9612-1aef-47a8-9d3c-6f3e7db36143.png
+
+
+[평가 데이터]
+HumanEval-X 벤치마크 데이터
+- HumanEval에 존재하는 Python 데이터를 C++, Java, JavaScript, Go로 수작업 해 확장함
+- 총 820개의 수작업 데이터 구축(164개씩 5개 언어)
+- 각 언어에 맞는 관례에 따라 구축함.
+  - 명명 스타일; CamelCase, snake_case 등
+  - Docstring 위치(함수 앞 선언 언어; Java, JavaScript, C++, Go)
+  - 주석 표현
+  - True/False, None 등의 표현
+  - 언어별 동작에 따라 테스트 결과 세분화(예; 바이너리 문자열 표현법, 반올림 처리법 등)
+- code completion 및 code translate 평가에 활용 가능
+- code translate task는 source 언어의 문제를 가져와 대상 언어로 구현 생성. 이 때, docstring은 제외
+
+
+[실험 결과]
+- 비슷한 규모의 오픈소스 multi-lingual 모델(GPT-J-6B, GPT-NeoX-20B, Incoder-6.7B, CodeGen-Multi-6B/16B)들을 baseline으로 선정
+- 실험 셋팅: pass@1의 경우 t=0.2, p=0.95 / pass@100 t=0.8, p=0.95, 생성 seq_len=1024
+https://user-images.githubusercontent.com/36894403/234783703-89e7af37-a7cd-431c-8e49-5a65dcae27cb.png
+- code generation
+https://user-images.githubusercontent.com/36894403/234859769-1a414ba8-b761-45dd-9870-6c980ac4b347.png
+  - 비슷한 사이즈의 모델들에 비해 뛰어난 성능.
+  - 더 큰 모델인 CodeGen-Multi-16B와 경쟁력 있음
+  - 데이터 분포에 따라 CodeGen-Multi-16B 와 언어별 성능에 차이를 보임
+- code translate
+https://user-images.githubusercontent.com/36894403/234860795-da902c9d-bc2e-42d5-877d-387e3a249f76.png
+  - 기본 CodeGeeX-13B와 fine tuning을 수행한 CodeGeeX-13B-FT로 평가
+  - CodeGeeX-13B-FT는 XLCost 데이터로 미세 조정 수행 후, 소량의 Go 데이터를 따로 수집하여 추가 fine tuning
+  - 모델에 따라 선호하는 언어가 뚜렷하게 구분되는 현상 관찰
+- 테스트 결과 분석
+  - 테스트 결과를 (합격, 오답, 런타임 오류, 구문/의미 오류, 미완성) 다섯가지 범주로 분류
+  https://user-images.githubusercontent.com/36894403/234861321-4674a340-3618-4617-a8ee-c59e5fdab36a.png
+  - CodeGeeX 는 런타임 및 구문/의미 오류를 가진 코드 생성 비율이 낮음
+- 생성 횟수의 제한(k=100)이 있을 때 각 언어별 샘플링 개수 선정에 대한 연구 진행(중요하지 않은 듯)
+  - pass@k에서 k를 지정하는 방법을 3가지 분류(Best Single, Uniform, Weighted Allocate)
+  - 실제 학습 데이터의 말뭉치 비율에 따른 Weighted allocate로 k를 분배하는 것이 가장 좋은 
