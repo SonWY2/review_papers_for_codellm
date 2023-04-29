@@ -17,7 +17,7 @@
 https://user-images.githubusercontent.com/36894403/235060714-a314b919-e3ca-4909-b567-dc1e13d3b52f.png
   
   
-[Abalation]
+[Abalation]; 최종모델 학습을 위해 필요한 전략 및 필터 선택을 위한 실험 진행
 1) Architecture abalation
 https://user-images.githubusercontent.com/36894403/235070926-9740860d-407f-4fae-aafe-6f51af3e3255.png
 - FIM vs No-FIM: 
@@ -34,15 +34,18 @@ https://user-images.githubusercontent.com/36894403/235070926-9740860d-407f-4fae-
   - 이는 데이터의 양이 많이 줄어서 일 수도 있으나, 삭제된 repository에 필요한 정보들이 있고 데이터의 품질이 저하된 것일 수 있음
 - comment-to-code ratio : 좋은 코드는 문서화가 잘 되어 있다고 가정. threshold > 1% 로 설정하며 단 비율이 80% 넘는 데이터는 제거
   - HumanEval은 0~2% 향상되지만 MBPP 성능 일부 감소. 
+  - 최종 데이터 필터링 전략으로 채택
 - near-deduplication
   - MinHash + LSH with unigram. (5-gram과 0.7 jaccard 유사도 threshold가 최적이라는 것을 경험적으로 제시)
   - HumanEval, MBPP를 1~3,4% 정도 일관되게 향상시킴
+  - 최종 데이터 필터링 전략으로 채택
 - tokenizer fertility 
   - 문자 대 토큰의 비율(char#/token#). python의 경우 2.5, Java는 2.9, JavaScript는 2.6 으로 설정
   - 성능에 미치는 영향은 중립적임. 미묘함.
 
+
 [최종 모델 architecture]
-- 앞선 실험을 토대로 MQA + FIM + more near-deduplication 필터와 comments-to-code 필터를 사용하여 SantaCoder 모델 학습
+- 앞선 ablation 실험 결과를 토대로 MQA + FIM + more near-deduplication 필터 + comments-to-code 필터를 사용하여 SantaCoder 모델 학습
   - 600K iteration(236B token)
   - FP16 FIM, MQA
   - num layer 24
@@ -52,12 +55,13 @@ https://user-images.githubusercontent.com/36894403/235070926-9740860d-407f-4fae-
   - learning rate = 2*10-4, 2% warm up with cosine decay
 - 학습 데이터
   - Stack v1.1에서 아래 필터링을 통해 python, java, javascript 268GB 데이터 추출하여 학습데이터로 사용
-  - near-중복 제거
+  - near-deduplcation 필터링
   - PII redaction 
   - 줄 길이 및 영숫자 비율에 따른 필터링
   - HumanEval, APPs, MBPP, MultiPL-E 에 포함된 데이터 필터링
 - Tokenize
   - 49,152 vocab size. BPE 알고리즘 활용하여 2.6GB(60만 행)에 대해 학습
+
   
 [결과]
 https://user-images.githubusercontent.com/36894403/235078360-59c1c26d-0cbc-48fc-8b4b-6e07c3108570.png
