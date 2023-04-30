@@ -1,0 +1,102 @@
+[요약]
+- 기존 Decoder(auto-regressive) 모델의 특성인 left-to-right 생성 뿐만 아니라 masking과 infilling이 가능한 통합 생성 모델 구축
+  - 임의의 코드 영역을 채우는 태스크 수행 가능
+  - 통합 모델임에도 불구 기존 left-to-right 성능에 저하가 없음을 확인
+- type inference, 코멘트 생성, 변수 이름 변경과 같은 작업에 대한 평가 진행
+
+[시사점]
+- Causal Masking objective learning을 통해 기존 생성 태스크의 성능 저하 없이 다양한 태스크를 수행할 수 있으며 모델 성능 UP
+- StackOverFlow 데이터를 활용해서 모델 성능 개선 확인. (자연어+코드 데이터가 포함된 코퍼스로 훈련 필요)
+- 여러 언어가 학습되면 특정 언어(예: python)에 대한 성능 저하 발생할 수 있음
+
+<hr>
+
+[Infilling and Synthesis via causal masking]
+- 이 논문에서는 causal 언어 모델과 masking language 언어 모델의 장점을 결합하는 것을 목표로 하는 최근 제안된 causal masking 목표 채택
+  - 제안된 논문(CM3: A causal masked multimodal model of the Internet)
+  
+1) Training: causal masking objective
+- 각 document에서 연속된 token을 span으로 무작위 선택하여 masking
+  - 이 때, span의 수를 평균 1이고 [1, 256] 범위에 한정된 포아송 분포에서 샘플링. 
+  - 일반적으로 소수의 span을 가짐 전체 데이터 중 span 1개가 50%
+  - span의 길이는 문서의 길이에서 균일하게 샘플링하고 span이 겹치는 경우 다시 샘플링.
+- span k는 special mask token인 <mask:k> 로 대체 후 시퀀스의 끝으로 이동 후 <mask:k> 토큰과 <EOM> 토큰으로 감싸서 추가.
+  https://user-images.githubusercontent.com/36894403/235357462-eceeacb7-69ab-458d-9564-05a66a122480.png
+- mask 토큰을 기준으로 left context, right context로 분리하여 마스크 문서의 log확률 최대화를 목표로 함
+  https://user-images.githubusercontent.com/36894403/235360017-73a74688-019f-47cc-afb9-48903924eb6e.png
+
+2) Inference
+- 기존의 auto-regressive한 방식 그대로 inference하는 것이 기본
+- 생성을 원하는 위치에 토큰을 삽입하고 문서의 끝에서 생성하도록 하여 문서의 임의 위치에 코드를 삽입할 수 있음
+  https://user-images.githubusercontent.com/36894403/235360682-bf7bc2a9-dda8-4432-b460-c296edf9ee87.png
+- <EOM> 토큰이 생성될때까지 샘플링
+- 이를 통해 양방향 컨텍스트의 이점을 활용하는 상호 의존적인 여러 작업 수행 가능
+
+<hr>
+
+[Model]
+Transformer 기반 6.7B 크기의 INCODER-6.7B 모델 구축
+- 자세한 아키텍처는 [참고 논문](Efficient Large Scale Language Modeling with Mixtures of Experts) 의 아키텍처와 동일하게 구축
+https://user-images.githubusercontent.com/36894403/235360961-5b725b33-f76b-409e-9df5-5e6c617cbe65.png
+- 훈련 데이터
+  - Github와 GitLab 에서 오픈 라이선스 공개 코드 수집
+  - StackOverflow 질문, 답변 및 댓글로 구성된 코퍼스 수집(타 언어 관련 문서도 수집함)
+  - 159GB 코드 데이터(이 중 52GB python) + 57GB StackOverFlow 데이터
+  https://user-images.githubusercontent.com/36894403/235340988-cd8ca296-5c39-4619-92ae-a729c5df4d44.png
+  
+
+[Experiment]
+infilling시 left-to-right single, left-to-right reranking, causal mask infilling 3가지 방법으로 비교
+- left-to-right single
+  - 기존 auto-regressive한 방법으로 이전의 컨텍스트만을 조건으로 생성
+- left-to-right reranking
+  - left-to-right single과 동일한 방법으로 10개의 후보를 생성해서, 전체 문장(오른쪽 컨텍스트까지 포함한) 에 대입하여 스코어링 하여 선택.
+  - 일반적으로 스코어링 기준은 완성된 문서 log P의 총 로그 확률
+- causal mask infilling(CM)
+  - Infilling and Synthesis via causal masking 참고
+  
+1) HumanEval
+- 한 줄 채우기
+  - 함수의 자연어 설명과 빈칸 앞뒤의 코드 라인에 따라 빈칸에 대한 한줄 완성 생성 실험
+  - pass rate / EM 으로 평가
+- 여러 줄 채우기
+  - 한 줄 채우기와 비슷하지만 여러 줄을 마스킹하여 생성 실험
+- 결과
+  https://user-images.githubusercontent.com/36894403/235350358-fc4b9f9b-f6a5-4f65-8d1b-2e749be2e4fc.png
+  - CM이 다른 두 방법에 비해 성능이 뛰어남
+  https://user-images.githubusercontent.com/36894403/235361824-fcf147f2-3d8d-4bd3-8291-074221e779a5.png
+  - 전체문장에서 오른쪽 컨텍스트의 비율 변화에 대한 pass rate에 대한 변화율을 보면, CM은 오른쪽 컨텍스트의 양이 많아질수록 성능이 더 좋아지고, 일관되게 높은 성능 발휘
+  
+2) Docstring 생성
+- fine-tuning 없이 zero-shot으로 모델 평가
+- CodeXGLUE code-to-text docstring generation 데이터셋 활용
+- 4-gram BLEU score로 계산
+https://user-images.githubusercontent.com/36894403/235362180-be1c8f0f-fe79-4fc2-ba0c-9641b3e87b1a.png
+
+3) Return Type 예측
+- Python 함수의 return type 예측 태스크
+- CodeXGLUE 및 TypeWriter OSS 데이터셋 대상으로 평가
+  - CodeXGLUE code-to-text 데이터셋에서 return type hint가 있는 데이터만 선별해서 평가에 활용
+  - TypeWriter OSS에서는 학습 데이터에 포함되지 않은 데이터 추출
+- CodeXGLUE 데이터셋
+  https://user-images.githubusercontent.com/36894403/235353080-913150b8-7102-40d7-b3fd-9e2209c0eee0.png
+  - CM에서 상당한 개선 효과 나타남
+- TypeWriter OSS 데이터셋(return None 타입이 포함된 / 포함되지 않은 두 개의 실험으로 결과 보고)
+https://user-images.githubusercontent.com/36894403/235353338-a0ebd4e8-8296-4f18-95b9-39044ed0c955.png
+https://user-images.githubusercontent.com/36894403/235353353-f4320327-44d8-4e69-9ef2-37592a64f4be.png
+  - CM에서 역시 상당한 효과 나타남
+
+4) Variable Name 예측
+https://user-images.githubusercontent.com/36894403/235355678-19224f73-7dde-4278-b21c-2adde2341117.png
+- CM에서 효과 나타남
+
+5) Abalation
+CM 여부 / 모델 크기 / 학습데이터 변형 에 대한 abalation 실험 진행
+https://user-images.githubusercontent.com/36894403/235355838-59bb80ef-06b4-4062-ab3e-ee7c6595b6af.png
+- CM을 사용하면 성능 향상. 기존 생성 수행 능력에도 영향 없음
+- 데이터가 고정된 상태에서 모델 크기 늘리면 성능 지속 향상
+- 여러 언어로 훈련하면 Python 평가에서 성능 약간 저하됨.
+- 훈련에 StackoverFlow 데이터를 포함하면 성능이 크게 향상됨. 
+  - → 향후 언어 합성 작업을 위해 자연어와 코드가 혼합된 코퍼스를 훈련 데이터에 포함해야 함
+
+<hr>
