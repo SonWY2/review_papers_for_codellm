@@ -2,27 +2,26 @@
 
 ## 요약
 - 새로운 평가 세트인 HumanEval 제공
--- 164개의 샘플 Python 함수 데이터
--- 12B Codex 
+  - 164개의 샘플 Python 함수 데이터
+  - 12B Codex 
 - 올바른 솔루션을 생성하기 위해 샘플링을 반복하는 방법론 제시
--- pass@k 메트릭, 
--- Codex-s의 경우 100개의 샘플 생성 시 HumanEval 77.5% 정확도.
--- mean log-probability가 가장 높은 샘플링이 가장 정확할 가능성이 높으므로 이를 배포시 활용하는 것이 좋음
+  - pass@k 메트릭, 
+  - Codex-s의 경우 100개의 샘플 생성 시 HumanEval 77.5% 정확도.
+  - mean log-probability가 가장 높은 샘플링이 가장 정확할 가능성이 높으므로 이를 배포시 활용하는 것이 좋음
 
 ## 데이터 수집
 2020년 5월에 github에서 호스팅되는 5,400만개의 repository에서 수집.
 - 1mb 미만의 고유한 python 파일 179gb 수집.
 - 필터링
--- 자동 생성 가능성이 높은 코드
--- 평균 줄 길이가 100보다 큰 코드
--- 최대 줄 길이가 1000보다 큰 코드
--- 영숫자 문자가 일부 포함된 파일(contained a small percentage of alphanumeric characters.) → 외국어도 함께 포함된 파일을 의미하는 듯
+  - 자동 생성 가능성이 높은 코드
+  - 평균 줄 길이가 100보다 큰 코드
+  - 최대 줄 길이가 1000보다 큰 코드
+  - 영숫자 문자가 일부 포함된 파일(contained a small percentage of alphanumeric characters.) → 외국어도 함께 포함된 파일을 의미하는 듯
 필터 링 후 최종 데이터 세트 크기는 159gb
 
 ## 모델
 사전학습된 GPT-3에서 fine-tuning 하는 경우데이터세트가 너무 커서 개선효과가 관찰되지 않음.
 그러나 fine-tuning된 모델이 더 빠르게 수렴하므로 GPT-3를 fine-tuning 후 사용함.
-
 
 
 - Codex: 12B 모델의 GPT 모델을 fine-tuning.
