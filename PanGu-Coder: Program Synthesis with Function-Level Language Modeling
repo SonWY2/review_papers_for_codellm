@@ -1,0 +1,105 @@
+[요약]
+- Text-to-code 생성을 위해 설계된 언어 모델 Pangu-coder 공개
+- pangu-alpha 아키텍처를 따라 설계된 모델. 영어와 파이썬 출력 전용으로 학습됨
+- 총 2단계로 나누어 학습. 1) unsupervised + 2)text-to-code downstream
+
+[시사점]
+- Text-to-code 만을 위한 모델 구축 사례 공유
+- 코드 임베딩과 docstring 임베딩을 분리하는 연구 진행
+
+
+[모델]
+1) 아키텍처
+https://user-images.githubusercontent.com/36894403/235412382-fa25148d-bf98-45cc-a7ac-92f7c180bb31.png
+https://user-images.githubusercontent.com/36894403/235412523-47157431-bc1a-4651-983e-af2c689197dd.png
+- PANGU-α 베이스로 설계됨.
+- 최상단에 Attention 레이어 추가. 다음 토큰 위치를 나타내는 임베딩이 쿼리 벡터로 사용됨.
+- 하이퍼 파라미터
+  - Adam optimizer  β1 = 0.9, β2 = 0.95, 가중치 감쇠 0.01
+  - batch size 256
+  - learning rate 1e-5 ~ 5e-6. cosine decay 스케줄러
+  - gradient clipping 3.0(1stage), 1.0(2stage)
+  - 2stage는 1stage의 weight에서 100만 step 추가학습
+
+2) 데이터
+- GHTorrent 도구를 활용하여 2021년 5월 이전의 Github 메타데이터 수집
+  - 6,500만개 Python 파일 380GB
+  - 중복 제거 → 185GB
+  - 파일 크기 1MB 이하 필터링
+  - Python 2 필터링
+  - 한 줄당 평균 100자 미만 필터링
+  - 1,000자가 넘는 라인이 있는 파일 필터링
+  - 최종 147GB
+- Text-to-code 목표에 맞게 docstring 추출
+- 데이터 예시
+  https://user-images.githubusercontent.com/36894403/235431575-99e889e3-54e5-4e42-9368-047b09405a81.png
+
+3) 평가
+- HumanEval, MBPP
+- docstring에서 함수를 생성하므로 종종 종속성이 누락되는 경우가 있어 해당 부분은 라이브러리를 통해 자동으로 import하여 해결
+
+4) Training
+- 1단계
+  - 일반적인 Causal Language Modeling을 통해 학습
+    https://user-images.githubusercontent.com/36894403/235431847-c0b0d41b-699b-4ea7-a439-b49fe3fe1bc8.png
+  - 1,024 sequence로 하여 1,880억개 토큰 학습
+- 2단계
+  - text-to-code를 위해 docstringcode 시퀀스로 학습
+  - 노이즈 제거를 위해 docstring이 19단어보다 짧거나, 함수 본문이 400보다 길거나, docstring과 코드 본문의 비율이 32가 넘으면 필터링함
+  - 3가지의 objective로 비교학습함
+    - Code-CLM: 코드 토큰에 대한 마스킹을 진행하고 causal language modeling을 적용.
+      https://user-images.githubusercontent.com/36894403/235418797-45fcecb0-d69f-4854-93bd-e5a33d481b6b.png
+    - Docstr-MLM: 표준 마스크 언어 모델링을 docstring만을 입력으로 하여 계산. 양방향이 아닌 기존대로 이전 토큰에만 주목하여 예측함
+      https://user-images.githubusercontent.com/36894403/235419128-de25e7df-b032-4f3b-b712-6fd886bb47c0.png
+    - Docstr-MCLM: 마스킹된 docstring에 causal language modeling을 적용.
+      https://user-images.githubusercontent.com/36894403/235419767-8795cee7-928a-4b93-a4f4-9ea12133d0f7.png
+
+5) tokneize
+- 42K의 서브토큰으로 구성
+- 1단계 학습에서는 docstring과 code의 임베딩이 공유됨
+- 2단계에서는 임베딩을 공유하거나 분리하는 실험 진행
+
+
+6) Fine-tuning
+- 프로그래밍 경진대회 데이터 활용(APPS, CodeContest)
+- 그 외 오픈 소스 프로젝트에서 CI 툴 사용 프로젝트 대상 추적 함수로 데이터 수집
+- Code-CLM 목표로 5 epoch 미세조정
+
+
+[결과]
+1) Zero-shot 결과
+https://user-images.githubusercontent.com/36894403/235423583-404f12a2-daf7-4f0c-b01c-0c210a0bbf9f.png
+https://user-images.githubusercontent.com/36894403/235423606-58f9ed8c-6cf7-4f49-8329-5265b7607d7e.png
+- 각각 HumanEval과 MBPP 데이터에 대한 결과
+- 모델 사이즈와 데이터의 측면을 고려하였을 때 성능이 우월하다 주장
+
+2) 디코딩 전략에 따른 비교(Temprature, p 선택 전략)
+https://user-images.githubusercontent.com/36894403/235424170-bcd0278b-242a-46af-a9dc-9af684e11173.png
+- k가 작을수록 p와 t가 다 작아야 best
+- k가 클수록 p와 t가 커져야 함
+
+3) prompting 에 따른 비교
+- 입력 시퀀스에 abalation 테스트
+  https://user-images.githubusercontent.com/36894403/235436090-d0d3fb6f-0e02-4e36-9335-6dd29ab23030.png
+- docstring 내 example, 함수 시그니처의 type hint 등의 제거 실험 결과
+  https://user-images.githubusercontent.com/36894403/235424391-6dfd7bc1-4d25-4e33-8f35-e90357e97083.png
+- 일관되게 유의미한 차이는 없었음
+
+4) 사전학습 목표에 따른 비교
+https://user-images.githubusercontent.com/36894403/235424458-feab6910-6395-4497-acde-0dd3ed89292d.png
+- docstring에 대한 손실을 계산하는 목표(docstr-mclm, mlm)는 코드 토큰의 손실만 계산하는 모델(Code-CLM)에 비해 성능이 낮음
+- docstring에 대해 계된 손실이 없는 경우 더 나은 코드 생성 가능
+- 문서 토큰 임베딩이 코드와 docstring 토큰의 손실을 결합하여 공동 업데이트 되기 때문이라고 추측
+  - 더 나은 docstring 생성/이해를 위한 업데이트와 더 나은 코드 생성이라는 업데이트 두 가지 상충되는 목표에 대한 동시 최적화 실패
+
+5) 임베딩 활용에 따른 비교
+https://user-images.githubusercontent.com/36894403/235424955-332c44f6-78b5-4c26-93cb-3b1f28bfcb56.png
+- 코드 임베딩과 docstring 임베딩을 공유하거나 분리하여 활용했을 때의 성능 연구 진행
+- 별도의 임베딩을 유지하는 것이 코드 생성을 위해 유리한 것 확인
+
+6) Finetuning 결과
+https://user-images.githubusercontent.com/36894403/235438356-8ae2e999-d08f-4e46-bea5-c0b53e9bc9c4.png
+- MBPP 데이터를 대상으로 fine tuning한 모델을 효과 없었음
+https://user-images.githubusercontent.com/36894403/235438512-69c18807-9a8b-4ecc-b455-486913d72c80.png
+- MBPP 데이터는 unit test가 입력으로 포함될 수록 합격률이 증가하지만, HumanEval에서는 문제 설명이 더 길고 상세하기 때문이라고 추측함.
+- 이 외 생성 결과 후처리를 통한 HumanEval 통과율 향상 등 몇가지 실험 추가 진행
