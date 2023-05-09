@@ -1,0 +1,59 @@
+**[개요]**
+- Code generation을 위해 생성한 샘플 중에 정확하거나 가장 좋은 솔루션을 선택하는 방법 제시
+- Dual Execution Agreement를 사용한 샘플링 방법 구축
+  - 사전학습된 언어 모델을 사용하여 테스트 케이스를 자동으로 생성 후, 평가를 통해 가장 우수한 코드 솔루션 선택
+- HumanEval, MBPP 벤치마크에서 상당한 개선 관찰
+  - 예) Code-cushman-001 의 HumanEval pass rate 상승 ( 33.5% → 44.5% )
+
+
+**[CodeT 방법론-상세]**
+**1) Dual Execution Agreement**
+https://user-images.githubusercontent.com/36894403/236963514-c63e1b10-5600-4cf2-ba70-a33afbad4d7a.png
+- 프롬프트를 통해 동일한 언어 모델에 각 프로그래밍 문제에 대한 대량의 테스트 케이스를 자동 생성
+- 각각의 솔루션으로 생성된 테스트 케이스 실행
+- 각각의 솔루션 - 통과된 테스트 케이스 페어링
+- 통과된 테스트 케이스가 같은 솔루션들을 군집화 (Dual Execution Agreement라 표현)
+  - 일반적으로 통과된 테스트 케이스가 많은 솔루션 군집일 수록 성능이 우수하다 판단
+  - 동일한 군집 내의 솔루션은 동일한 기능을 수행한다 가정
+- 군집화 된 dual execution agreement를 기반으로 scoring / ranking 하여 최상의 솔루션 생성
+ 
+**2) Methology**
+https://user-images.githubusercontent.com/36894403/236967781-c0a85676-e5ef-4f72-b7d0-68bc21a762e7.png
+- 사전 학습된 모델로 code와 test case 생성
+  - code: Context(import 문, 함수 signature, docstring)를 입력으로 하여 generation 유도
+  - test case: Context + prompt(예: # check the correctness of has_close_elements) + assert
+  - 이 때, Context에서 docstring 내 모든 입력-출력 예제는 제거해야 함.
+  
+https://user-images.githubusercontent.com/36894403/236972579-64ad6dc5-aa18-4d63-bc73-b9c493dbe505.png
+- 솔루션-통과된 테스트 케이스 페어링 및 같은 테스트 케이스 통과된 솔루션 군집화
+  - 위 그림에서 녹색으로 표시된 x_1, x_2는 동일한 테스트 케이스를 통과한 군집
+- 군집화 된 dual execution agreement를 기반으로 scoring
+  - 집합의 점수는 f(S) = |S_x||S_y|로 매김. S_x는 군집 내 code 솔루션의 개수, S_y는 군집 내 통과한 테스트 케이스의 개수.
+  - 위 그림의 녹색 집합의 점수는 (2, 3) = 6점 이며, 보라색 집합의 점수는 (1, 4) = 4점.
+  - 따라서 첫번째 집합 코드 솔루션의 품질이 더 우수하다 판단 가능
+- code 솔루션 수가 많은 경우 code와 test case를 샘플링하여 단순화 할 수 있음.  
+
+**[실험 결과]**
+https://user-images.githubusercontent.com/36894403/236838302-7905421f-1dff-4afa-9557-5e5cdef2c022.png
+* AlphaCode-C는 paper Competition-level code generation with alphacode」의 클러스터링 방법으로 수행
+- Codex(code-cushman/davinci 등)에서 최대 18.8%p 개선 확인
+- 기존 CodeLM 모델인 Incoder, Codegen-Mono 에서도 개선 효과 확인.
+  - codeT pass@2 가 base인 pass@10에 육박함
+  
+**[Test Case 분석]**
+**Q1) 생성된 테스트 케이스의 품질**
+https://user-images.githubusercontent.com/36894403/236848098-d8c8ac18-25f3-4455-beba-0886efc34d91.png
+- 정확한 테스트케이스를 생성하지 못할 경우 CodeT의 실패로 연결될 수 있음
+
+**Q2) 테스트 케이스를 개선과 모델 성능 상관관계**
+- 테스트 케이스를 가장 성능이 좋은 code-davinci-002에서 생성하여 다른 모델들의 솔루션 생성과 결합하여 실험 진행
+https://user-images.githubusercontent.com/36894403/236848259-b66f2326-af6f-45d8-8b14-c37e7fa17384.png
+- Incoder와 CodeGen과 같은 모델에서 더 좋은 테스트 케이스와 함께 성능 개선 확인
+
+**Q3) 테스트 케이스 수와 성능의 상관관계**
+https://user-images.githubusercontent.com/36894403/236992028-055f7112-53db-422e-a4f0-b44bb60d2316.png
+- 일반적으로 테스트 케이스가 많을 경우 성능 향상됨
+- 단, 계산 비용 균형을 위해 샘플링 수 50개 이상에 limit 3 정도로 수행하면 성능 격차가 많이 좁혀짐
+
+
+의문점 - scoring 펌핑을 위한 방법론 아닌가..? 실제 서비스 시에 on-the-fly하게 활용할 수는 있는 건가..?
