@@ -1,0 +1,29 @@
+https://arxiv.org/pdf/2302.14691.pdf
+
+[요약]
+- 모델에게 다양한 작업에 대한 "사례 학습"을 제공하여, 새로운 작업에 대한 Zero-shot 성능을 향상시키는 방법. 
+- 모델이 사용자의 지시사항을 이애하고 그에 따라 적절하게 반응하는 능력을 향상시킴
+
+
+[ICIL; In-Context Instruction Learning]
+https://user-images.githubusercontent.com/36894403/238178039-a70709e7-b57f-4635-8708-625df103fe8c.png
+- 여러 가지 작업을 수행하는 예시(demonstration)을 모델에게 보여주는 것.
+- 각 예시는 Instruction, input, output을 입력한 형태
+- 이러한 방식을 통해 모델은 지시사항을 이해하고 해당 지시사항에 따른 **'적절한 출력을 생성하는 방법'**을 학습
+- 만약 "대화 생성" 작업의 수행을 목적으로 할 때, 입력 prompt는 다양한 작업(예: 텍스트 분류, QA 등)에 대한 <instruction, input, output>의 예시로 구성됨
+- 이 때, 중요한 점은 목적으로 하는 "대화 생성" 작업 자체가 예시에 포함되지 않아도 된다는 점. 
+- 다양한 작업을 수행하는 방법을 모델이 배우면서 동시에 모델은 새로운 작업을 수행하는 능력을 향상시킴.
+
+- ICIL의 효과는 주로 지시사항에 명확한 답변 선택지(예: agent)가 포함된 분류 작업을 선택하는데서 비롯된다고 판단함.
+https://user-images.githubusercontent.com/36894403/238185240-5946042b-b0ff-403d-a965-52b57f702a76.png
+
+- 특이하게 예시의 입력 인스턴스 분포를 무작위 문장으로 바꾸어도 성능에는 큰 영향을 미치지 않았음
+https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/4f6e5902-b00d-440d-974d-6dc2baa25ab0 
+
+[결과]
+- ICIL은 Zero-shot 작업의 일반화 성능을 크게 향상 시킴. 
+- GPT-J+ICIL 모델은 GPT-3 Davinci 모델보다 더 좋은 성능 발휘
+- ICIL은 instruction tuning과 상호보완적인 특징 有
+  - Instruction tuning 한 모델에도 ICIL을 적용하여 성능 향상 가능
+- 특히 100B 이상의 큰 모델에서 성능 향상폭이 더 큼
+https://user-images.githubusercontent.com/36894403/238178007-a17c689b-c24d-456f-8cf6-bb1ea84d1515.png
