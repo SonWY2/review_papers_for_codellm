@@ -1,0 +1,158 @@
+훈련 데이터의 효율성과 인필 작업에서 LM의 기능을 공동으로 개선하는 기법을 통해 새로운 사전 훈련 패러다임을 제안
+
+- 기존 auto-regressive한 모델은 후속 토큰(suffix)을 활용하지 않음. 
+- 기본 LM의 auto-regreissve한 특성을 유지하면서 사전 학습 데이터를 보다 효율적으로 활용하고자 함
+  - denser한 형태의 supervision을 통해 데이터 효율성 증대
+  - 실제 시나리오에서 사용자가 일반적으로 infill task를 원함
+  
+ [MIM]
+- 주요 아이디어
+  - 오른쪽에서 왼쪽으로 처리하는 추가 언어 모델 도입한 후 co-reularize(공동 정규화) 수행
+    - 각기 다른 LM이 서로의 컨텍스트 이점 활용 가능
+  - 두 LM의 일치 경향을 활용하는 효율적인 infill inference 절차 아이디어 
+ 
+https://user-images.githubusercontent.com/36894403/238171605-d43d882c-2765-429a-a272-b6d9e90c18db.png
+- 두 개의 decoder-only 아키텍처 활용
+- 두 LM은 서로 반대 방향으로 토큰 생성. 이 때, 표준 lm loss와 agreement regularizer의 조합으로 두 모델을 공동학습함
+  *agreement regularizer: 두 언어 모델을 정규화하여 일관성(consistent)을 높이고, 두 모델이 동일한 토큰으로 수렴하는 시점을 감지하여 infilling 생성 프로세스를 조기중단하기 위함
+- forward 모델은 기존의 auto-regressive model 대체
+- backward 모델은 폐기 또는 infilling에 활용 가능
+
+**2. Preliminaries**
+**2.1 THE INFILLING TASK**
+- →p  ←p 사이에 infilling을 위한 M(삽입할 token의 개수)은 알 수 없음. 따라서 M은 사전에 입력되는 추가입력값으로 간주함.
+  - 예: 'The quick __ fox' 라는 문장이 있을 때, __에 들어가야 하는 token의 개수를 예상할 수 없음.
+- **FIM(Fill-in-the-Midlle)** vs MIM
+  - 저자들은 이전 자신들의 연구에서 FIM 방식 제시. FIM은 LM에 수정 없이 적용할 수 있다는 점과 계산 효율적이라는 장점 보유.(해당 방식은 다른 code LM모델 Incoder에 반영되어 있음)
+  - (prefix, infilling target, suffix) 의 형태를 (prefix, <mask token:n>, suffix, <mask token:n>, <infilling target>) 으로 변환
+    https://user-images.githubusercontent.com/36894403/235357462-eceeacb7-69ab-458d-9564-05a66a122480.png
+  - auto-regressive 한 모델에서도 MLM을 흉내내어 infilling 시도
+  - 그러나, context가 토큰의 부자연스러운 연결.
+  - LM 생성은 일반적으로 마지막 몇 개의 토큰에 편향되어 있기 때문에 target을 뒤로 멀리 보내면 접두사와 멀어져 각 부분의 영향력 균형 깨짐
+  - 또한 (prefix, target, suffix) 로 임의로 문서를 분할함으로 임시방편적. N개 토큰이 있으면 발생할 수 있는 O(N2) 분할 중 하나만 학습하는 격
+    - 예) "brown fox jumps over the lazy dog" 라는 문장
+      1. 접두사: "The", 중간 부분: "quick", 접미사: "brown fox jumps over the lazy dog"
+      2. 접두사: "The quick", 중간 부분: "brown", 접미사: "fox jumps over the lazy dog"
+      3. 접두사: "The quick brown fox", 중간 부분: "jumps", 접미사: "over the lazy dog" ... 와 같이 총 N(N-1)/2. 이 경우는 36가지의 분할 방식이 있음
+      그러나 실제 학습은 36가지 경우 중 1가지만 학습
+
+**2.2 BIDIRECTIONAL LANGUAGE MODELING**
+- 양방향 언어 모델링은 in-context learning을 수행하기 어렵다는 단점 有
+- MIM은 auto-regressive하며 과거 token과 미래 token에서 계산된 확률 두 개의 확률 값을 가짐
+
+**3 MEET IN THE MIDDLE**
+- 각 모델이 다음 토큰을 독립적으로 잘 예측해야 하지만, 각 모델에서 다음 토큰에 할당된 확률분포가 일치해야 하는 것(공동 정규화)을 목표로 함
+**3.1 PRE-TRAINING**
+https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/bece50f4-75f5-4a45-b0fd-117586443109
+- 다음과 같은 방식으로 training loss 계산.
+- 첫번째 항은 forward모델의 예측 loss, 두번째 항은 backward 모델의 예측 loss, 세번재는 총 변동거리(total variation distance)의 β가중값.
+- total variation distance(Agreement Regularizer)
+  - forward(→p)와 backward(←p)를 모두 훈련하는데, 이 때 각 토큰의 어휘에 대한 예측 확률분포가 일치하도록 유도하는 공동 정규화 항(co-regularization term)을 사용
+    https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/75832014-08fd-4241-b1f5-c028902ade73
+  - 두 확률분포 사이의 차이를 측정하기 위해 단순 총 변동거리(total variation distance) 사용. 유클리드 거리와 같은 다양한 방식으로 측정 가능하다고 함.
+    - 예) '나는 바나나를 __' 이라는 문장에 __에는 '던졌다, 먹었다, 뜯었다' 등 여러 어휘가 올 수 있는데, AB 두 모델에서 모두 동일하게 예측하도록 일관성 향상시키고자 함
+
+**3.2 INFILLING **
+- 추론을 위해 효율적이고 지연 시간이 짧은 생성 process를 가져야 함.
+- 효율적인 방법 없이는 forward, backward 모델이 EOS와 같은 조건에 따라 F, B개 token을 생성했을 때 최적의 매칭 포인트를 찾기 위해 F*B개의 경우의 수 검토해야 함
+- MIM의 infilling 추론은 
+  1) forward와 backward 모델을 병렬로 실행하여 생성하고, 
+  2) 두 모델이 생성한 token 중 meeting point가 있는지 확인 후, 
+  3) 병렬 검증결과를 거쳐 생성 과정을 조기 중단할지 결정하는 프로세스를 따름.
+- 이는 FIM보다 지연시간이 개선되고 품질이 더 좋음
+- 프로세스 상세
+  https://user-images.githubusercontent.com/36894403/238171605-d43d882c-2765-429a-a272-b6d9e90c18db.png
+  - ① 각 모델이 하나의 토큰씩 동기적으로 생성
+    ② 양쪽 모델이 생성한 토큰 중 일치하는 값이 있는지 확인. 일치하면 MIM을 위한 후보 token이 됨
+    ③ 만약 후보 token을 찾았다면, 나머지 절반은 '병렬'로 auto-regressive하게 생성하면 됨.
+      - 예) 해당 논문에서 참고한 타 논문 "Blockwise Parallel Decoding for Deep Autoregressive Models" 방식
+        https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/b0e6af28-b700-46a0-a53e-30575c52b9b7
+      - 만약 'ride' token에서 두 모델의 token이 서로 "만났다"면 forward 모델의 이후 생성은 하나씩 순차적인 생성이 아니라,
+        backward에서 생성한 미래의 token을 병렬적으로 생성함.
+  - 실험결과 대부분 두 시퀀스가 중간에서 만났음
+  - 그리고 자주 등장하는 'the'와 같은 token에서 발생하는 오탐을 줄이기 위해 n-gram 활용.
+  - 중간에서 만난 후 병렬적으로 생성 검증 중, 오일치하는 부분이 발생할 경우 해당 지점부터 다시 프로세스 진행(병렬 검증 절차)
+  - forward, backward가 생성한 가장 높은 확률값 매칭 조건을 완화하여 threshold 이상의 매칭 시 만났음을 판정하는 완화 허용 기준도 가능
+  - 두 모델이 만나지 못한 경우, 더 높은 확률을 가진 시퀀스 반환
+
+- optional(선택적 개선 사항)
+  - 모델의 infilling 성능 개선을 위해 두 모델의 attention layer 출력을 결합하는 fused attention hidden representation 메커니즘 활용 가능
+    https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/2db2c9f3-e49f-4542-af54-38d6c0486132
+  - 모델이 다른 모델의 예측을 참고할 수 있으므로 상대 방향에서 정보가 유출되지 않도록 2단계 프로세스를 사용
+    - 1) λ=0으로 모델 파라미터를 업데이트 하지 않고 각 모델에서 후보 →z ←z 생성.
+    - 2) λ>0으로 사용하고 서로가 생성한 후보 토큰을 고려. 서로가 생성한 후보를 λ만큼 더 고려하게 됨.
+  - 해당 방식은 infilling 성능을 개선하지만 기존 auto-regressive LM으로 사용할 수 없어서 선택적으로 활용해야 함
+  
+  
+4 EXPERIMENTS  
+4.1 DATA AND MODELS
+- 프로그래밍 언어 데이터
+  https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/f235c7a8-3772-45e7-b91c-9a8d0ca17f28
+  - 3000억개 토큰으로 학습. python, java, c++이 대부분
+  - Incoder 모델에서 사용한 데이터보다 6배 큼
+- 자연어 데이터
+  - CC-News(76GB): 6,300만개 영어 뉴스 기사 데이터
+  - OpenWebText(38GB): GPT-2에 사용된 WebText 데이터 셋
+  - CC-Stories(31GB) : Winograd 스키마와 일치하도록 필터링된 CommonCrawl 데이터의 하위 집합
+  - CC-100(292GB) : CommonCrawl 스냅샷에서 추출한 데이터 셋 Wikipedia 스타일
+- 모델: 350M, 1.3B, 2.7B 파라미터로 학습
+
+4.2 BENCHMARKS AND METRICS
+- Code generation and infilling
+  - HumanEval, MBPP, APPS, HumanEval-X, HumanEval Infilling, MBXP
+- Language Modeling
+  - 도메인 내(학습데이터 중 보류된 하위집합), 도메인 외(PILE)로 나누어서 테스트
+       
+4.3 MAIN RESULTS       
+- Code generation and infilling
+https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/e8af8abf-5bcc-4747-9754-078ee94e20b8
+https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/989c115d-0ea6-4982-b3b5-9fa6ca4bf01d
+https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/fe2e7251-64bf-4064-ab16-f6830a17bdfb
+  - 일반적으로 FIM이 뛰어난데, MIM은 더 뛰어남
+  - 모델 사이즈가 클 수록 개선 효과 증가.
+- Language Modeling
+https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/7f24e7d0-c8ec-467e-b69d-1949a48274cf       
+  - 역시 MIM이 더 우수한 것 확인
+  
+4.4 Abalation Study
+- 앞서 3.2 Infilling에서 optional로 지정되었던 선택적 개선사항에 대한 평가 진행.
+  https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/1ac4f1af-de9e-48ac-a5b4-92bfc6cd37f4
+  - infilling task에 성능이 더 증가하지만 auto-regressive하게 사용할 수 없음
+- Agreement Regularizer
+  https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/238170646-daecdf7f-6c15-4c4f-81aa-2ec5a3b23204.png
+  - 모델의 일치성을 위해 regularizer 필요 확인
+  
+4.5 EFFICIENCY OF INFERENCE
+https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/238170729-e7940abd-7dfb-4811-946e-06da2e1f2de3.png
+- FIM 대비 MIM 속도 향상 확인
+- 토큰 생성이 병렬로 수행되고, 병렬 검증 수행 후 생성이 조기종료 가능하기 때문에 이런 결과가 나왔다고 
+
+
++)생각: pretrain 없이 finetuning시에만 해당 방법론을 적용해도 되나..? 적용해서 효과를 볼 수 있나..? 
+       finetuning에만 적용해도 된다고 가정해도 backward로 생성된 모델이 없는데 따로 pretrain 해야 하나..?
+       아니라면 기존 pretrain 모델로 역방향을 잘 생성하도록 finetuning 후 사용할 수 있나..?
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+    
