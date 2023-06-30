@@ -1,12 +1,12 @@
 
 💡 Tip
-> It introduces phi-1, a model with 1.3B parameters that obtains a pass@1 rate of 50.6% on HumanEval thanks to a novel training process. Unfortunately, the weights are not available.
+> It introduces phi-1, a model with 1.3B parameters that obtains a pass@1 rate of 50.6% on HumanEval thanks to a novel training process. Unfortunately, the weights are not available.  
 새로운 훈련 프로세스를 통해 13억 개의 파라미터를 가진 모델인 phi-1을 도입하여 HumanEval에서 50.6%의 합격률을 달성했습니다. 아쉽게도 가중치는 사용할 수 없습니다.
 
 
 📝 Paper: https://arxiv.org/pdf/2306.11644.pdf
 
-The authors argue that high quality data can change the shape of the scaling laws, allowing small models to match the performance of bigger ones.
+The authors argue that high quality data can change the shape of the scaling laws, allowing small models to match the performance of bigger ones.  
 저자는 고품질 데이터가 스케일링 법칙의 형태를 변화시켜 작은 모델도 큰 모델의 성능에 맞출 수 있다고 주장합니다.
 ![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/3bc8b10b-13bc-4f40-96f2-c5a4c014e37c)
 
@@ -15,7 +15,7 @@ The authors argue that high quality data can change the shape of the scaling law
 # The importance of high-quality data
 
 
-**Motivation**: The authors observe that standard code datasets like The Stack, StackOverflow and CodeContests suffer from several drawbacks: samples are not self-contained but referenced, a lot of them are trivial while the most complex ones are poorly documented, and the overall distribution is skewed towards certain topics and use cases.
+**Motivation**: The authors observe that standard code datasets like The Stack, StackOverflow and CodeContests suffer from several drawbacks: samples are not self-contained but referenced, a lot of them are trivial while the most complex ones are poorly documented, and the overall distribution is skewed towards certain topics and use cases.  
 **Motivation**: 저자들은 The Stack, StackOverflow, CodeContests와 같은 표준 코드 데이터 세트가 몇 가지 단점을 가지고 있다고 지적합니다. 샘플이 독립적이지 않고 참조되고, 많은 샘플이 사소한 반면 가장 복잡한 샘플은 제대로 문서화되어 있지 않으며, 전반적인 분포가 특정 주제와 사용 사례에 치우쳐 있다는 점입니다.
 
 
