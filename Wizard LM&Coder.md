@@ -5,9 +5,10 @@ WizardCoder: Empowering Code Large Language Models with Evol-Instruct
 [요약]
 - WizardLM
   - Data-driven한 접근법 고안
-  - Evol-Instruct 데이터 생성법을 제안하여 해당 데이터로 미세 조정한 LLaMA 모델(7B)로 우수한 성능 달성
+  - Evol-Instruct 데이터 생성법을 제안하여 해당 데이터로 LLaMA 모델(7B)을 미세 조정하여 우수한 성능 달성
 - WizardCoder
   - WizardLM에서 고안한 Evol-Instruct 기법을 코드 도메인에 적합하도록 수정하여 데이터 생성 및 starcoder 미세조정
+  - (GPT-4 제외) HumanEval, MBPP 등 벤치마크에서 SOTA 달성.
 
 ---
 [Evol-Instruct]
