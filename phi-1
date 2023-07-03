@@ -1,0 +1,50 @@
+Phi-1 1.3B : 교과서 수준의 데이터(6B) + GPT-3.5로 합성 생성된 교과서/연습 문제(1B), 총 토큰수 50B
+Phi-1-small : Phi-1 작은 모델 버전 350M
+Phi-1-base : 코딩 연습 데이터 세트에 대해 미세조정
+
+
+- 지금껏 딥러닝 성능의 향상은 네트워크 크기를 확장하면서 성능 발달 시킴
+- 최근 들어 데이터 품질의 측면에서 접근하여 성능 발달에 관심 많아짐
+- 데이터의 품질을 개선하면 기존의 스케일링 법칙을 바꾸어 훨씬 더 간결한 훈련/모델에서 좋은 성능 낼 수 있음
+
+- 기존 LLM을 새로운 세대의 LLM을 훈련하기 위해 사용하는 것은 새로운 추세임. 논쟁은 있음
+
+2.Training details and the importance of high-quality data 
+- 모델의 핵심은 교과서 수준의 훈련 데이터에 의존하는 것
+- 기존의 웹 기반 데이터 세트는 모델이 알고리즘적으로 추론하고 계획하는 방법을 배우는데 부적합
+  - 많은 샘플이 독립적이지 않고 스니펫 외부의 모듈/파일에 의존하여 추가적인 컨텍스트 필요
+  - 일반적인 예제들이 의미 있는 계산 포함하지 않음(예: GUI 구성 관련 코드 등)
+  - 알고리즘 관련 코드들은 너무 복잡하고 문서화되지 않아 익히기 어려움
+  - 예제가 특정 주제나 사례에 치우쳐져 imbalance함.
+- 위의 문제들을 해결할 데이터 큐레이션 방법 제시
+- 기본적으로 다음 3가지 데이터 세트를 활용
+  - ① filtered code-language: 언어 모델 베이스의 classifier(6B 토큰)을 사용하여 The Stack 및 StackOverFlow 에서 중복제거 및 필터링 한 code dataset 
+  - ② synthetic textbook : 1B 토큰 미만의 GPT-3.5로 생성된 파이썬 교과서 수준 dataset
+  - ③ synthetic exercises : 약 180M 토큰 규모의 파이썬 연습/솔루션 으로 구성된 소규모 합성 dataset
+- 1~2 번째 데이터를 합쳐 CodeTextBook 이라 명명. 7B 토큰 수준
+- 3번째 데이터를 CodeExercises라 명명.
+- CodeTextBook 데이터를 토대로 Phi-1-base 학습
+- CodeExercises 데이터로 미세조정하여 Phi-1 학습
+  - 데이터의 양은 작지만 큰 개선을 가져옴
+
+
+[데이터셋]
+① filtered code-language
+- 최초 데이터 크기 : 3,500만개 파일/샘플, 35B토큰
+- determine its educational value for a student whose goal is to learn basic coding concepts. 라는 prompt로 GPT-4로 품질 좋은 10만개 subset 구성.
+  (기본 코딩 개념을 배우는 것이 목표인 학생에게 교육적 가치가 있는지 판단하라)
+- subset으로 Codegen 모델의 임베딩 출력을 feature로하여 품질을 예측하는 랜덤포레스트 classifier 학습 및 생성. 
+
+② synthetic textbook
+- 다양성(코딩 개념 + 기술 + 시나리오 + 난이도 + 복잡성)을 가진 데이터 생성 필요
+- 언어 모델은 학습 데이터에 따라 가장 가능성이 높거나 일반적인 경로를 따르기 때문에 새로운 방법을 탐색할 인센티브 부족. 다양성 하락함.
+- 예제의 품질과 일관성을 유지하면서 언어 모델이 창의적이고 다양한 결과물 생성을 유도할 '트릭'필요.
+  - 고정된 어휘에서 무작위로 선택된 단어의 하위 집합을 프롬프트에 포함시키고 텍스트에 어떻게든 결합되도록 하여 프롬프트에 무작위성 주입 방법 활용
+https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/94fe32cc-66f0-42d8-b252-ee648ba4d52a
+
+③ synthetic exercises(CodeExercise)
+- 180M 미만의 Python 연습문제와 솔루션으로 구성된 데이터 셋
+- 자연어 명령을 기반으로 함수 완성 작업을 수행하도록 모델을 조정하는 것이 목표
+- 함수이름을 제한하여 다양성 부여함.
+- HumanEval과 유사한 데이터가 생성되지 않도록 필터링 함
+https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/e87bf969-4f64-4902-aad2-e4a8497c713f
