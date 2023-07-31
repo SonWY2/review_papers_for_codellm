@@ -1,26 +1,21 @@
 https://arxiv.org/pdf/2307.14936.pdf
 
 [요약]
-- 코드 생성을 위해 사전 학습된 대규모 언어 모델을 효과적이고 효율적으로 향상시킬 RRTF(Rank Responses to align Test&Teacher Feedback) 프레임워크 제안
+- 코드 생성을 위해 사전 학습된 대규모 언어 모델을 효과적이고 효율적으로 향상시킬 RRTF(Rank Responses to align Test&Teacher Feedback) 제안
 - stacoder-15B를 RRTF를 활용한 강화학습으로 HumanEval, CoderEval, LeetCode 벤치마크에서 높은 성능 달성
-
-[기여]
-- 코드 작업에 대하여 데이터 효율적이고 구현하기 쉬우며 모델에 구애받지 않는 RRTF 패러다임 제안
-- 기본 모델보다 30% 가까이 개선된 모델 구현
+  - 기본 모델보다 30% 가까이 개선된 pangu-coder2 
 - 효과적인 학습 데이터 구축, RRTF 모델 학습, 모델 최적화 경험 및 연구결과 공유
 
-
-
-- 기존 RL기반 접근방식의 문제
+------------------------------
+[RRTF-Rank Responses to align Test&Teacher Feedback]; (https://junbuml.ee/rrhf)
+- RRHF(Rank Responses to Align Language Models with Human Feedback)와 CodeRL 에서 영감을 받아 RRTF 방식 제안
+  - 기본적인 아이디어는 유사. response의 ranking을 사용하여 더 간단하고 효율적인 훈련 접근방법 구현.
+- 코드에 대한 기존의 RL기반 접근방식(RLHF)은 다음과 같은 문제 보유.
   - 기존 RL은 compiler, debugger, executor, test case와 같은 코드 프로세서의 피드백에 따라 가치/보상 함수 설계함
   - 테스트 결과를 보상으로 직접 고려하면 기본 모델 개선에 한계 有
   - 기존 RL 알고리즘(PPO)은 구현이 복잡하고 대규모 언어 모델에서 훈련이 어려움
   - 모델 훈련하고 테스트 실행동안 많은 시간이 소요됨
 
--RRTF: (https://junbuml.ee/rrhf)
-  - response의 ranking을 사용하여 더 간단하고 효율적인 훈련 접근방법 구현
-
-[RRTF]
 - Instruction Tuning, Evol-Instruct, 강화 학습을 결합한 학습 프로세스 & 프레임워크 제안
 - 핵심 아이디어: 테스트 response와 사람의 선호도를 함께 활용하여 응답의 순위를 매기는 feedback으로 활용.
 https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/257054667-08abf7ec-5145-4f0c-aa9f-00b4f0a9d926.png
@@ -44,9 +39,9 @@ https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/257054667-
 - Multi-query-attention, absolute positional embedding, flash attention
 https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/257054907-8325d3fe-5f53-4aee-ad3f-05d908bf4e45.png
 
-[dataset]
-- code alpaca 20k 데이터셋에서 evol-instruct를 활용해 데이터셋을 진화시킴(반복적으로 수행)
-- 프롬프트
+[dataset/Training corpus]
+- code-alpaca 20k 데이터셋에서 evol-instruct를 활용해 데이터셋을 진화시킴(반복적으로 수행)
+- Evol-Instruct 프롬프트
   https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/257057740-e2920e78-4874-4f08-91c5-31bef0604405.png
 - 다양한 모델에서 해당 문제의 답 샘플링함. => 10만개 insturction-solution 데이터 쌍(초기 말뭉치) 수집
 
@@ -68,7 +63,8 @@ https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/257061032-
   - RL로 해결되지 않은 문제가 instruction tuning으로 해결 가능한 사례. 향후 검토 필요
 - 200번의 샘플링 시에도 어떠한 모델로도 해결되지 않은 문제도 있었음.
 
-[inference optimization]
+[inference optimization 실험 수행 결과]
+- 아래 두 library를 사용하여 inference를 optimization하고 이에 대한 연산속도 향상과 정확도 손실에 대한 실험 수행
 - CTranslate2: OpenNMT에서 개발한 Transformer 모델 가속화 라이브러리
 - GPTQ: LLM quantization 라이브러리
 https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/257061659-7af27202-0b5d-4170-9e1a-3e72295ae4eb.png
