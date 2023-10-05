@@ -1,0 +1,82 @@
+[요약]
+- 컨텍스트가 긴 LLM 훈련을 효율적으로 finetuning하기 위해 변형된 LoRA를 사용하는 아이디어 제시.
+- 여기서 변형된 LoRA(이하 LoRA+)는 임베딩 및 정규화 레이어에 대한 학습을 의미.(경험적, 실험적으로 발견)
+
+- 해당 방법론을 적용하여 LLaMA2 7B 모델 8xA100 단일 머신에서 100k까지 컨텍스트 확장.
+- full fine-tuning에 비해 perplexity 차원에서 약간 떨어지지만, 학습 비용적 측면에서 큰 이득이 있음.
+- 다른 방법론 대비 기존 아키텍쳐를 유지하여 flash-attention2등 최신 기술과 호환 가능.
+
+[Introduction]
+- 기존 방법론들은 fine tuning 하는데에도 상당한 비용 발생 => 효율적으로 학습할 방법 탐색(연구 목표)
+- 효율적 학습을 위해 LoRA를 사용하여 학습 시도.
+- 그래도 여전한 문제 有
+  - 컨텍스트가 길어질수록 perplexity 상승.
+  - lora rank 값을 높여도 완화 x
+  - 또한 LoRA 사용여부와 관계없이 표준 self-attention 메커니즘 하에서 컨텍스트 크기에 대해 계산 비용 급증
+     https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/272436604-e5bc97a0-b4f4-4d53-a53c-e550d47669fb.png
+- 위 문제들을 해결하기 위한 S2-attn과 LoRA 학습 방법론 제시
+
+[기존 연구]
+- Long-context Transforemrs
+  - multi-head attention을 근사치 attention으로 수정, 또는 메모리 메커니즘 사용.(예: Longformer, BigBird)
+  - 압축한 어텐션과 full attention은 큰 차이가 있어 fine-tuning 불가능.
+- Long-context LLMs
+  - rotary position encoding을 수정 및 활용하여 컨텍스트 확장 시도. Position Interpolation, Focused Transformer(LongLLaMA).
+    - full finetuning에 의존하므로 계산 비용 및 학습 비용이 큼
+  - Landmark attention(2023,.)는 효율적이지만 컨텍스트 입력을 압축하는 과정에서 손실 발생
+
+[LongLoRA]
+- Shift-short Attention(S2-attn)
+https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/272437139-7b3e695d-ca52-45b9-a8da-7327cef89c40.png
+  - 전체 컨텍스트를 특정 크기로 나눈 short-attention + shift.
+    - 여기서 shift attention과의 combination을 통해 transformer block 또는 head간 교차 및 공유를 통해 정보 교환.
+    - 위 그림의 pattern 1이 short-attention, pattern 2가 shift-attention.
+    - shift는 예를 들어 8192 context를 학습한다 할 때, 각 short 그룹의 크기가 2048이라면 1024만큼 shift해서 attention하는 것.
+    - 위와 같은 방식으로 추가적인 계산 비용 발생시키지 않지만 정보 교환이 가능하다는 점이 핵심.
+https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/272444821-e8bbff5d-0945-4668-81ad-e2cc60ef01b8.png
+  - 위 표를 통해 shift하지 않을 경우(p1만 사용) context 확대에 따라 perplexity도 증가하지만 shift를 함께 사용하며 안정되는 것 확인 가능.
+  - 또한 finetuning 없이는 perplexity가 달나라감 확인
+
+https://user-images.githubusercontent.com/36894403/272448828-e82f3945-0e12-45b9-b09e-887c817d0fe3.png
+  - LoRA+ 방법론으로 기존의 다른 효율적인 atttention 매커니즘 설계로 학습했을 때의 비교. (S2-attn, Dilate, Stride sparse)
+  - 다른 방법론들보다 S2-attn이 더 나음.
+
+https://user-images.githubusercontent.com/36894403/272576826-c9b42f99-9dd2-4641-93b9-fef86f7330ec.png
+  - 구현은 아주 간단하게 두 단계로 가능하다 함.
+    - 1) token을 attention head의 절반으로 shift
+    - 2) feature를 token → batch 차원으로 이동
+
+
+[Experiment]
+- LLaMA2 7B(최대 100k), 13B(최대 65536), 70B(최대 32768) 대상.
+- hyperparam
+  - A100 x 8ea, single node
+  - AdamW β1 = 0.9, β2 = 0.95
+  - learning rate: 2 x 10-5(7, 13B), 10-5(70B)
+  - enable warmup
+  - weight decay 0
+  - micro batch size 1, gradient accum 8 = global batch 64
+  - max training step 1000
+- 학습데이터: Redpajama, PG19(책 말뭉치), Arxiv Math proof-pile + LongQA(자체 구축)
+- 결과:
+  https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/272462509-5dd7bca5-5fb1-438c-98cc-daf6eb04e1ec.png
+  - 대표적으로 proof-pile 데이터셋으로 봤을 때, perplexity 안정적. context를 늘렸을 때 오히려 perplexity가 감소하는 경우도 관찰됨.
+  https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/272462892-064b2355-8101-4e39-8793-1062e51911fd.png
+  - 위 결과에 따르면 오히려 작은 컨텍스트 크기에서 약간의 perplexity 저하 발생. interpolation 방법의 한계.
+  https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/272463229-c9822f0b-8767-4165-be77-a7663b8c3e81.png
+  - 긴 문맥에서 검색관련 실험 수행. LLaMA2 13B를 18k로 학습.
+  - 최신 모델인 LongChat-13B와 유사한 결과 확인.
+
+[Abalation Study]
+- attnetion FLOP 비교
+  https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/272463430-fcced258-eeb3-4410-a6cc-6215e9c5579f.png
+  - full attention은 context 확대에 따라 차지하는 FLOP비율 급격히 증가함.
+  - S2-attn 활용시 많이 감소.
+- Full fine-tuning vs LoRA+
+  https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/272463571-a2bc7399-b5b6-4803-ac9a-1e5050e953a0.png
+  - 미세조정 전에는 15.82로 perplexity 높음.
+  - perplexity 빠르게 떨어지고 200step 이후부터는 full fine과 LoRA의 perplexity가 일정차이로 수렴됨.
+- attentnion pattern
+  https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/272448828-e82f3945-0e12-45b9-b09e-887c817d0fe3.png
+  - head간 교환이 best. cross layer는 허용 가능하지만 최선 x
+  - pattern1 또는 pattern2만 사용하면 동작하지 않음.
