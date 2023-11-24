@@ -1,0 +1,46 @@
+Arxiv: https://arxiv.org/abs/2308.16824v1?utm_source=tldrai
+github: https://github.com/NL2Code/CodeM
+release date: 2023-08-31
+
+
+- Instruction Tuning 학습 단계에서 학습되는 프로그래밍 언어들간의 상호작용/상관관계 분석 연구.
+- 프로그래밍 실무에서 인간 프로그래머가 한 프로그래밍 언어를 숙달하면 새로운 언어를 배우기가 쉬워지는 것처럼 LLM 에서도 동일한 효과가 발생할까?
+  - 단, 해당 연구는 이미 많은 프로그래밍 언어에 대한 기초가 pretrained된 Starcoder를 통해 실험 수행되었음 유의
+- 결과: Code LLM의 미세조정 단계에서 프로그래밍 언어가 서로를 크게 향상시킬 수 있음.
+
+[실험 설계]
+- 8개의 프로그래밍 언어(Python, JavaScript, Typescript, C, C++, Java, Go, HTML)에 대한 코퍼스 제작.
+  - 각 9k.
+  - 샘플: https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/285084717-19fab30a-aa43-4fab-9701-0cf780275869.png
+- 구성 단계:
+  - CodeAlpaca 20k에서 Python 관련 데이터 추출(seed)
+  - GPT-3.5를 통해 시드 Instruction(Python)을 Evol-instruct 방식(in-deapth)으로 각 언어(Javascript, C 등)에 대해서 재작성하도록 요청.
+  - HTML은 마크업 언어임으로 기존 프로그래밍 언어와 차이가 커서 in-breadth evolution 방법만 사용.
+- 학습 방식:
+  - Alpaca format의 Instruction tuning
+- 하이퍼 파라미터:
+  - Deepspeed
+  - precision: fp16
+  - micro batch size: 2
+  - cosine annealing schedule
+  - learning rate 2e-5
+  - accumulation step 4
+  - warm-up ratio 30
+
+[평가]
+- HumanEval-X. 단, 동일한 방식으로 HumanEval-C와 HumanEval-Typescript 생성하여 활용. HTML은 코드생성에 활용될 수 없으므로 평가 대상에 포함되지 않음.
+- StarCoder 7B를 베이스 모델로 실험 진행. 각 언어를 개별적으로 학습시켜 다른 언어의 성능이 어떻게 변하는지 관찰.
+- 결과
+  https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/285348240-5dc63697-79f8-46fe-acf8-044e7bc53de3.png
+  - 각 프로그래밍 언어를 개별적으로 학습시킨 모든 모델이 기본 Stacoder보다 큰 폭으로 뛰어남
+  - 또한 서로가 서로를 크게 향상시킬 수 있음. (예: Python만 학습된 CodeM-Python은 HumanEval-Java를 14.03% 향상시킴)
+  - 특이하게 마크업 언어인 HTML을 학습한 CodeM-HTML이 CodeM-Java보다 HumanEval-Java 성능이 더 좋음.
+  - 각 언어 데이터 1.2k만을 모아 모든 언어 대상을 학습한 CodeM-Mixed는 모든 언어에서 뛰어남.
+  - Instruction tuning이 모델의 일반화를 해치지 않으면서 다국어 데이터를 활용해 우수한 코드 생성 성능을 얻을 수 있음을 시사함.
+  https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/285363215-04af5aa6-4b8b-4cb1-b95c-7056aeaa0564.png
+  - Starcoder 15B에서도 좋은 성능
+- 상관관계 분석:
+  https://github-production-user-asset-6210df.s3.amazonaws.com/36894403/285363394-b61c99bc-65c7-41e8-b611-1cb8f15e6256.png
+  - 공통 구문 및 문법을 공유하는 언어끼리 효과가 더 좋음(예: C, C++)
+  - 뿐만 아니라 매트릭스의 모든 상관관계 값이 양수로 미루어보아 언어의 개선 추세가 유사하며 모두 효과적임을 알 수 있음.
+
