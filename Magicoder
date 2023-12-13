@@ -1,0 +1,102 @@
+Magicoder: Source Code Is All You Need 
+```
+release : 23.12.04
+arxiv : https://arxiv.org/pdf/2312.02120.pdf
+github: https://github.com/ise-uiuc/magicoder
+```
+
+[요약]
+- OSS-Instruct데이터셋: 오픈 소스의 코드에서 추출한 코드 스니펫으로 고품질 Instruction dataset 작성 (75k)
+- Magiccoder-CL-7B 및 MagiccoderS-CL-7B 모델 공개
+  - Magiccoder-CL-7B: CodeLLaMA 7B 모델을 75k의 OSS-Instruct 데이터셋으로 파인튜닝한 모델
+    - Magiccoder-CL-7B은 16B이하인 모든 SOTA LLM 능가하는 성능
+  - MagiccoderS-CL-7B: Magiccoder-CL-7B 모델을 Evol-instruct 방식(theblackcat의 evol_1 111k)으로 추가 튜닝한 모델
+    - HumanEval에서 ChatGPT와 동등한 수준(70.7 vs 72.6)
+    - HumanEval+에서는 근소 우위 (66.5 vs 65.9)
+- 최근 공개된 DeepSeeker-6.7B 모델을 사용하면 MagiccoderS 방법으로 HumanEval pass@1 76.8점 달성
+- Comment-Function 기본모델을 미세조정하면 모델에 부정적인 영향 발생 확인
+
+[OSS-Instruct]
+- 75K 규모의 GPT-3.5-generated 데이터.
+- 종래 code-related Instruct 데이터의 한계 극복
+  - `code-alpaca`는 21개의 시드작업으로 고정되고 `Evol-Instruct`는 5개의 휴리스틱한 진화에 의존하여 학습대상 모델이 데이터생성 모델의 편향성을 상속할 우려 有
+  - 기존 evol instruct와 orthogonal한 방식으로 구축
+
+(figure1)
+- OSS-Instruct는 수집된 일부 `오픈소스들의 seed code snippet(예: github)을 통해 문제를 생성하고 솔루션 생성을 유도하여 작성`됨(위 그림 참조)
+- 데이터 생성 프로세스
+  - 1) The Stack 데이터의 필터링된 버전인 `Starcoderdata`를 seed corpus로 수집
+  - 2) Seed code snippet 추출: corpus에서 각 코드 문서(파일)에 대해 1~15개의 연속된 줄을 무작위로 추출 (80k)
+    - python 40k 외 Java, TypeScript, Shell, C#, Rust, PHP, Swift 5k씩
+  - 3) 아래 Prompt 를 통해 `GPT 3.5`를 통해 Greedy decdoing 방식으로 데이터 생성
+    - {프롬프트} - https://github.com/ise-uiuc/magicoder/blob/main/data/prompt.txt
+  - 4) 데이터 클렌징
+    - 동일한 seed code snippet이나 줄바꿈 "\n"을 공유하는 데이터 dedup
+    - 생성된 데이터의 불완전성은 LLM이 학습할 수 있는 정보가 여전히 포함되어 있다고 판단하여 제거하지 않음
+    - benchmark dataset(HE, HE+, MBPP, DS-1000, GSM8k)의 문제들과 exact match를 통해 동일한 데이터 제거
+
+- 생성 데이터 결과
+  (figure3)
+  - 전반적으로 알고리즘 문제, 현실적인 문제, 단일 기능 코드 생성, 라이브러리 기반 프로그램 완성, 전체 프로그램 개발, 전체 애플리케이션 구축 등 다양한 코딩 작업을 생성함
+  - 카테고리: 코딩과 관련된 10개의 카테고리를 수작업으로 설계하고 임베딩 모델(INSTRUCTOR)을 통해 카테고리 분류 수행결과 여러 범주에 걸쳐 다양하게 생성됨 확인
+    (figure 4)
+  - 길이 분포: Input/ouput의 token 길이 분포도 다양하게 새성됨
+    (figure 5)
+  - HumanEval과 유사성: 기존의 데이터세트들과 비교해봤을 때, OSS-Instruct 방식이 가장 유사성이 낮은 분포의 데이터 생성됨. (제일 유사성 없는 데이터로 가장 높은 점수 달성했다는 셀프칭찬 분석)
+
+
+[실험 구성]
+- 데이터: OSS-Instruct(75k), Code Evol-Instruct(111k)
+- 베이스 모델: CodeLLaMA-7B, DeepSeeker-6.7B
+- 1단계: OSS-Instruct 75k를 활용한 `Magicoder` fine tuning
+  - A100 gpu 2
+  - DDP
+  - 2 epoch
+  - 15 warm-up steps
+  - linear scheduler
+  - 5e-5 learning rate
+  - Adafactor optimizer
+  - batch size 512
+  - sequence truncation length 1216
+- 2단계: 1단계에서 생성된 Magiccoder에 Code Evol-Instruct(111k)를 추가 튜닝한 `MagicoderS`
+  - max sequence length 1024 
+  - 나머지 hyper param은 1단계와 동일
+
+[실험 결과]
+- 생성된 모델로 HumanEval+ / MBPP+ greedy 디코딩을 통한 측정 수행
+(표 1)
+  - `Magicoder-CL`이 CodeLLaMA-Python-34B 및 WizardCoder-CL-34B를 제외한 모든 오픈소스모델보다 뛰어남
+  - `MagicoderS-CL`은 HumanEval+에서 ChatGPT 및 기타 모델들보다 성능 뛰어남
+
+- Multilingual Code 생성
+(표 2)
+  - `Magicoder-CL`은 절반의 언어에서 WizardCoder-SC보다 나은 결과
+  - `MagicoderS-CL`는 WizardCoder-CL-34B와 비슷한 성능
+  - 주목할 점은 Instruction-Tuning 형태로 학습했음에도 Bigcode-harness에서 상당한 개선을 보여준다는 것.
+    - LLM이 데이터 포맷을 넘어 데이터로부터 지식 학습이 가능했다는 것에 대한 방증
+
+- Data Science 코드 생성
+(표 3)
+  - 모든 기준선을 상회하는 성능 확인
+  - WizardCoder-SC-15B 보다도 8.3%p 절대적인 성능 향상.
+
+- 학습언어 vs 다른 언어와의 상관관계 분석
+(표 5)  
+  - 파이썬 전용 데이터와 비파이선 데이터로 분류하여 학습 실험
+  - 특정 프로그래밍 언어에 대한 Instruct-Tuning이 다른 언어의 코딩 성능도 향상시킴
+
+[OSS-Instruct vs Direct-Finetuning]
+- 왜 오픈소스 코드를 직접 사용하지 않는지에 대한 답
+- Direct dataset을 따로 구축하여 OSS-Instruct화 학습 비교 실험 수행
+  - Direct dataset
+    - 오픈소스 코드에서 의미적으로 연관성있는 주석-함수 쌍을 추출.
+    - 함수 signature와 주석(docstring)에서 코드를 예측하도록 모델 훈련시킴.
+- 결과
+  (표 6)
+  - 75K의 주석-함수 데이터에 대한 미세조정은 기본 모델을 더욱 악화시켰음
+  - 데이터 쌍에 본질적으로 존재하는 상당한 노이즈와 불일치 때문인것으로 추측됨.
+  - 코드 Instruct-tuning에 있어 형식보다는 데이터 사실성이 더 중요하다라고 추측
+
+
+
+
