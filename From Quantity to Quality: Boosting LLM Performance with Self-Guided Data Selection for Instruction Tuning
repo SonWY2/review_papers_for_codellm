@@ -1,0 +1,107 @@
+release date: 2023-09-15
+arxiv: https://arxiv.org/pdf/2308.12032.pdf
+github: https://github.com/MingLiiii/Cherry_LLM
+
+
+[요약]
+- LLM이 방대한 오픈소스 데이터셋에서 "Cherry sample"을 자율적으로 식별하고 선택할 수 있는 방법론 제시
+  *Cherry sample: LLM의 성능 향상을 위한 품질 좋은 데이터셋
+  - 핵심: IFD(Instruction-Following Difficulty)
+  - 모델의 예상 출력과 자율 생성 능력 간의 불일치를 식별하는 metric 활용
+- Alpaca, WizardLM의 데이터셋을 대상으로 기존 데이터의 5~10% 만 cherry picking 통해 학습하면 기존 모델(풀데이터 학습)과 유사하거나 더 뛰어난 성능 발휘
+
+
+[IFD 방법론]
+그림1 https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/df684fdb-4121-4f17-9c9f-f5d512f90256
+- 1) 작은 데이터셋을 활용한 사전 학습, 2) 경험 기반 평가, 3) 자기 주도적 경험을 통한 재교육의 **세가지 단계**로 구성됨
+
+1) 작은 데이터셋을 활용한 사전 학습
+  - 데이터의 일부분을 사용하여 모델에 기본적인 instruction following 기능 습득
+  - 초기 모델에 노출되는 데이터는 다양성 보장을 위해 임베딩에 대한 K-means 클러스터링을 통해 획득.
+    - 임베딩 계산:
+      $$[{h}^{Q}_{j,1},...h^Q_{j,v}] = LLM_{\theta}(w^{Q}_{1,j}...w^{Q}_{m,j})$$
+      $${h}^{Q}_{j} = \frac{\sum_{i=1}^{m} \textbf{h}^{Q}_{i,j}}{m} $$
+    - WY Note: 단순 다양화 차원의 데이터 선택이면 그냥 Jina embedding 써도 되지 않을까..?
+    - K=100 클러스터링을 통해 각 클러스터에서 10개의 인스턴스 샘플링(100 * 10 = 1,000개 데이터)
+  
+2) 경험 기반 평가: 
+  - 첫번째 단계 1)에서 학습한 모델을 가지고 각 데이터 샘플의 난이도 점수를 평가하는 새로운 지표(IFD) 사용
+  - 기존의 방법론들은 cross-entropy loss 화룡했음.
+    - 그러나 cross-entropy loss sθ(A|Q)는 높다고 지시를 따르기 어렵다는 의미 x. 단순히 문자열 A의 고유한 요인으로 그럴 수 있음
+  - Direct Score sθ(A):
+    - 현재의 LLM은 지식학습-지식정렬 단계가 구분되어 있기 때문에 단순 sθ(A|Q)를 사용하지 않고, 주어진 샘플의 instruction을 따르는 난이도를 추정하기 위한 sθ(A) 도입
+    - $$sθ(A) = \frac{1}{N} \sum^N_{i=1} log P(w^A_i | w^A_1 , . . . , w^A_{i−1} ; θ). $$(4)
+    - 해당 지표는 답을 단독으로 생성하는 LLM의 능력을 측정함. (문맥적 안내 없이 답안 자체에 내재된 고유한 난이도)
+    - 점수가 높을수록 모델이 답을 생성하는 데 본질적으로 더 어렵거나 복잡함을 의미
+  - IFD; Instruction-Following Difficulty rθ(Q, A)
+    - 샘플의 고유한 어려움과 모델의 능력 사이의 분석을 통해 샘플의 Instruction에 대한 난이도 추정 가능.
+    - 구체적으로 주어진 (Q, A) 쌍의 instruction을 따르는데 대한 난이도(IFD)점수 rθ(Q, A)를 sθ(A)와 rθ(A|Q) 의 비율로 추정
+      - $$rθ(Q, A) = \frac{sθ(A|Q)} {sθ(A)} $$
+    - 이 점수는 주어진 instruction이 해당 답안을 작성하는데 도움이 되는 정도 측정. 즉, Instruction의 난이도. 
+    - 점수가 높을수록 instruction에 대해 응답을 정렬하지 못함을 의미.
+
+3) 자기 주도적 경험을 통한 재교육: 2)의 스코어링을 통해 cherry dataset 구성하고 최종 모델 훈련
+  - 두번째 단계 2)에서 설명된 IFD를 1)의 모델을 활용하여 모든 데이터셋에 스코어링 한 뒤, 상대적으로 높은 IFD 점수를 가진 샘플을 cherry picking함.
+  - 모든 프로세스는 별도의 외부 모델이 필요하지 않은 자기 주도적 방법.
+
+[실험 설정]
+- dataset
+  - training data: Stanford Alpaca, WizardLM(70k 하위집합) 활용
+  - test data: Vicuna, Koala, WizardLM, Self-instruct, LIMA
+- 훈련 디테일:
+  - base model: LLaMA 7B
+  - learning rate: 2e-5
+  - batch_size: 128
+  - Adam Optimizer
+  - 3 epoch
+  - sequence length: 1024
+  - k-means 1,000개 샘플로 기본 학습된 LLaMA 7B 모델을 활용하여 IFD 점수 스코어링 후 1보다 높은 점수를 가진 샘플만 필터링
+- 평가 기준
+  - GPT-3.5 / GPT-4 활용
+  - 1-10 점으로 스코어링함. 평가 순서의 편향을 해결하기 위해 서로 다른 순서로 스코어링 하여 점수 비교. 모두 동일한 결과일 경우에만 올바른 판단으로 간주
+
+[실험 결과]
+그림 2: https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/b05b225b-e8d0-4532-b730-85df462d6142
+- 결과
+  - (a) Alpaca의 5%만 사용한 모델이 전체 데이터로 학습한 alpaca 모델 능가
+  - (b) 원본 Alpaca의 10%의 데이터만 학습한 모델이 재구성된 WizardLM 모델 능가
+- 데이터 양에 따른 결과 비교
+  그림3: https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/11c61934-4a27-4c08-be61-88fb0d21bfc4
+  - 학습 데이터 셋의 크기를 원본 데이터의 5%, 10%, 15%, 20%로 변화해서 학습 실험 수행
+  - 10%만 가지고도 전체 데이터로 훈련된 모델의 결과 능가
+- 각 task별 성능 비교
+  표1, 표2: https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/63c9f800-b503-4cb3-b73d-6b8b8042fc01
+  - 대부분의 카테고리에서 공식 모델보다 우수하거나 적어도 비슷한 성능.
+  - 단, 수학과 코딩 범주에선 예외가 관찰됨.
+  - 7B 모델이 본질적으로 이 두 가지 task에 대해 최적의 성능을 발휘하지 못해서 정렬을 학습하려면 더 많은 샘플이 필요했기 때문이라 판단함.
+  - 즉, "데이터가 많이 필요한 특정 카테고리가 존재할 수 있다"
+
+[Abalation 실험]
+그림4 https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/5eb88778-3036-4561-a216-058b4628b234
+- 데이터 선택
+  - 해당 방법론을 사용하여 선택한 데이터로 학습하면 더 높은 성능
+- IFD 점수의 유용성
+  - 낮은 IFD 점수를 사용하여 학습된 모델은 기대 이하 성능.
+- 높은 CA로 학습한 모델도 정답 텍스트에 대한 사전 학습된 LLM의 이해도를 고려하지 않았기 때문에 높은 성능 발휘x
+  
+그림5 https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/f9dc01e1-81f6-4cb1-b873-cd39e97ff67a
+- 초기 원시 모델의 필요성
+  - 초기 원시 모델에서 IFD를 계산하는 과정에 대한 abalation test
+  - 적은 데이터로 사전학습을 진행한 모델에서 IFD를 계산한 모델이 그렇지 않은 방법 대비 지속적으로 성능이 높음
+
+[IFD validity 측정]
+- IFD 점수에 따라 선택된 데이터의 실제 품질 검증 수행
+- ChatGPT를 활용하여 6가지 기준으로 평가
+  - 범위, 복잡성, 명확성, 깊이, 단순성, 필요 지식
+그림 6: https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/53726740-54d8-4821-9c9c-71e51a5bc30e
+- IFD 점수가 높은 데이터는 일반적으로 범위, 복잡성, 깊이, 필요지식에서 높은 점수 획득, 명확성 단순성에서 낮은 점수 획득
+- 또한 인간 평가자 3명이 난이도를 평가
+  - IFD점수가 하위 5%에 속하는 모든 샘플이 '쉬움'으로 분류됨
+  - IFD점수가 높은 데이터의 (11개/100개)만 '쉬움'으로 분류됨
+
+[Cherry Data의 분포 특성 분석]
+- 체리 데이터의 분포 특성 분석을 위해 각 instruction의 임베딩을 t-SNE를 사용하여 2D공간에 매핑
+- 일반적인 생각과 달리 체리 데이터가 고른 난이도가 아닌 난이도가 높고 낮은 데이터 사이에 뚜렷한 경계를 가짐.
+  - 전체 난이도가 instrution 스펙트럼에 고루 퍼져 있어야 한다는 기존의 가정과 상반된 결과
+- IFD를 k=100으로 클러스터링 한 결과 IFD 점수가 높은 데이터 군집은 스토리텔링이나 현상 설명과 같이 더 깊고 복잡한 작업으로 대표되었음.
+
