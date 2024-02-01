@@ -1,4 +1,4 @@
-Hover over this sentence to see the translation. [↗](# "이 문장 위에 마우스를 올리면 번역을 볼 수 있습니다.")
+Hover over this sentence to see the translation. [번역](# "이 문장 위에 마우스를 올리면 번역을 볼 수 있습니다.")
 Click here to see the translation. [한글 해석 보기](https://example.com/translation)
 
 
