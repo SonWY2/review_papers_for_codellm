@@ -1,3 +1,6 @@
+Hover over this sentence to see the translation. [↗](# "이 문장 위에 마우스를 올리면 번역을 볼 수 있습니다.")
+Click here to see the translation. [한글 해석 보기](https://example.com/translation)
+
 
 💡 Tip
 > It introduces phi-1, a model with 1.3B parameters that obtains a pass@1 rate of 50.6% on HumanEval thanks to a novel training process. Unfortunately, the weights are not available.  
