@@ -47,9 +47,10 @@ github: https://github.com/hkust-nlp/deita
      ```
    - 작은 데이터로 라벨링 후 LLaMA-1 7B를 훈련시켜 Scorer로 활용.
    - multi-turn 대화의 경우 각 턴마다 개별적인 점수를 매겨 총합을 최종 점수로 활용
- - ![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/249af12a-6af6-4a63-9d68-f10accd11059)
- - Evol Complexity가 $$X_{sota}$$와 $$X_{base}$$ 둘 모두에서 우수한 성능을 달성
- - PPL은 랜덤 샘플링 기법보다 더 나쁜 결과가 나왔으며, 추가 조사를 통해 PPL이 큰 샘플은 일반적으로 매우 짧은 응답이었음을 확인함.
+ - 결과:
+   - ![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/249af12a-6af6-4a63-9d68-f10accd11059)
+   - Evol Complexity가 $$X_{sota}$$와 $$X_{base}$$ 둘 모두에서 우수한 성능을 달성
+   - PPL은 랜덤 샘플링 기법보다 더 나쁜 결과가 나왔으며, 추가 조사를 통해 PPL이 큰 샘플은 일반적으로 매우 짧은 응답이었음을 확인함.
 
 2) Quality
 - Evol Compleixty와 유사하게 품질에 기반한 Evol quality 방법을 제안하고 여러 metric과 비교 실험 수행
@@ -80,6 +81,46 @@ reasons.
   - TODO: 프롬프트 삽입
   - M=5, 5회 반복 후 Evol된 새로운 Response 0~M까지 획득
   - Evol Complexity와 마찬가지로 6개의 응답을 한번에 ChatGPT에 제시하여 응답의 순위 및 점수를 매겨 품질 점수 q 획득.
+```
+according to the quality of their response. Score each response from 1 to 5, with 6
+reserved for responses that are already very well written and cannot be improved further.
+Your evaluation should consider factors such as helpfulness, relevance, accuracy, depth,
+creativity, and level of detail of the response.
+Use the following format:
+[Response 1] Score:
+[Response 2] Score:
+#Question#: <Instruction>
+#Response List#:
+[Response 1] <Response 1>
+[Response 2] <Response 2>
+[Response 3] <Response 3>
+[Response 4] <Response 4>
+[Response 5] <Response 5>
+```
   - LLaMA-1 7B 모델에 fine tuning하여 품질 점수 예측할 수 있도록 수행.
+- 결과:
+  - ![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/42b62d76-e907-441c-844b-3c2c5e564630)
+  - Evol Quality의 접근 방식이 일관되게 우수
+  - 품질 분산이 높은 X_base가 더 큰 영향을 받음
+  - 응답 길이가 최종 alignment 성능에 긍정적인 영향을 끼치지만, 이미 품질이 높은 데이터 세트에서는 효과가 크지 않았음.
+
+3) Diversity
+- 다양성이 정렬에 미치는 영향과 다양성과 간결성 유지를 위한 효과적인 전략
+ | **종류**                | **정의**                                                          |
+|-----------------------|-----------------------------------------------------------------|
+| **랜덤 샘플링**            | seed data에서 무작위 선택                                              |
+| **Instag Diversity**    | ChatGPT로 Instruction에 대한 태깅 후, 태그 집합에 없는 새로운 태그가 등장할 때마다 해당 데이터셋 추가 |
+| **Repr Filter**    | LLaMA-1 13B로 문장을 임베딩하고 cosine similarity에서 특정 threshold 이상의 거리를 가진 데이터만 수집 |
+- Repr Filter
+  - LLaMA-1 13B 모델을 활용하여 데이터 샘플을 각각 임베딩하고 Cosine similarity로 다양성 측정
+  - 데이터 집합 대비 특정 threshold 이상인 데이터 샘플을 데이터 집합에 재귀적으로 추가해가며 필터링
+  - 해당 논문에선 유사도 0.9로 설정 (TODO 부록 c.1)
+- 결과:
+  - ![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/12810814-b441-49fc-a4cd-e4da15e07020)
+  - Repr filter로 선별한 데이터로 학습한 경우가 X_sota, X_base 모두에서 가장 높은 점수 획득
+
+[DEITA]
+- 단순하고 직관적으로 evol compelxity 점수 c에 quality 점수 q를 곱하여 s := c*q 로 복잡성과 품질을 결합한 통합 점수 evol score 'S' 획득.
+
 
 
