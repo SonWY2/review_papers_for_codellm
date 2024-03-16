@@ -121,6 +121,34 @@ Use the following format:
 
 [DEITA]
 - 단순하고 직관적으로 evol compelxity 점수 c에 quality 점수 q를 곱하여 s := c*q 로 복잡성과 품질을 결합한 통합 점수 evol score 'S' 획득.
+- 다중턴의 경우 각 턴마다 점수를 계산하고 합산하여 최종 점수 S 산출
+- 시드 데이터풀의 데이터 중 evol score가 가장 높은 샘플부터 시작하여 Repre filter 전략에 따라 중복된 샘플을 하나씩 버림
+- TODO 알고리즘 및 그림 1
+
+[DEITA 학습 실험 설정]
+- 베이스 모델:
+  - LLaMA-1 13B, LLaMA-2 13B, Mistral-7B에 학습
+  - Vicuna, WizardLM, Mistral-Instruct, Zephyr 등과 비교
+- 학습 파라미터: TODO
+- 데이터:
+  - X_sota에서 각각 6k, 10k로 선별하여 학습.
+  - Alphagasus, LIMA, TAGLM과 같은 다른 데이터 선택 접근 방식과 비교
+- MT-Bench, AlpacaEval, ARC, hellaSwag, MMLU, TruthfulQA, 사람 평가로 evaluation.
+
+[결과]
+![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/6127f8e6-53a6-4da1-8764-4b1ca4f532e3)
+![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/d66f9b84-d428-41b9-9d50-0ff79c1cc095)
+- DEITA 모델이 다른 SFT 모델보다 우수한 성능 발휘
+- AlpacaEval에서 DEITA의 이득이 MT-Bench 이득과 명확하게 일치하지 않는다는 점 발견.
+  - 하위 작업에 대한 세부 수행능력 평가 결과 DEITA mistral 모델은 코딩, 수학, reasoning과 같은 고급 능력에 대한 성능이 향상되어 MT-Bench의 점수가 향상되었으나, AlpacaEval에서 두드러지지 않아 이러한 현상이 나타났다 함.
+- 또한, 데이터의 선별과정이 어느정도의 선호도 반영과정과 유사하기 때문에 DPO를 추가로 적용하면 더욱 효과가 좋음 확인.
+![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/b412872a-b2c8-4142-b9d0-2d97ce175520)
+- 데이터 확장 효과를 조사한 결과 DEITA는 3k의 데이터로 300k의 데이터를 학습한 것과 동일한 성능을 제공했음
+- 단, 데이터 선택 방식에 따라 선택량이 증가하면 특정 시점에서 결국 성능이 감소하는 현상이 발생했음.
+- 이는 정렬에 적합한 데이터의 비율은 생각보다 제한적이라는 것을 시사.
+- 더 많은 컴퓨팅 파워를 사용하더라도 정렬 성능이 반드시 향상되지 않는다는 것을 확인함.
+
+
 
 
 
