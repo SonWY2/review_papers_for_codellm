@@ -1,0 +1,46 @@
+relase_date: 2024-04-16
+arxiv: https://arxiv.org/abs/2404.10719
+github: x
+
+[요약]
+- LLM을 인간의 선호와 일치시키는 대표적인 두 방법인 보상 기반(PPO)과 비보상 기반(DPO) 방법은 비교 분석하고 성능을 향상시킬 수 있는 요소들을 탐색.
+  - RQ: DPO가 RLHF 도메인에서 PPO보다 우수한가? PPO의 추가적인 성능 향상이 가능한가?
+- DPO의 한계: DPO는 모델 출력과 선호 데이터 간의 분포 이동에 민감하며, 특히 도전적인 작업(code generation)에서 성능 저하 초래 발생.
+- PPO는 다양한 작업에서 일관된 성능을 보여주며 도전적인 작업(code generation)에서 dpo보다 높은 성능. 특히 advantage normalization, large batch size, exponential moving average update를 활용하여 성능 향상이 가능.
+
+[DPO의 한계]
+- 현재 많은 학술적 연구에서 DPO가 주로 사용됨.
+- 그러나 DPO는 1)훈련 목표의 이론적 문제와 2)분포 밖 데이터(OOD)에 더 취약한 특징을 가지고 있음.
+- ppo와 dpo는 공통적으로 reward model의 잠재적 실패를 이용해 실제 human preference를 충족하지 않고도 높은 보상 획득 가능.
+- DPO는 배포되지 않은 데이터를 악용하는 솔루션을 발견할 수 있음. 즉, reference policy가 사람의 선호도에 잘 부합하는 경우에도 policy를 과도하게 벗어날 위험 있음.
+  - DPO는 (win, lose)로 주어진 선호 데이터에 맞춰 정책을 최적화하기 때문에, 학습된 데이터 분포에서 벗어난 새로운 데이터에 대해 잘못된 높은 확률을 할당 할 수 있음.
+  - 반면에 PPO는 reward model을 통해 OOD 샘플을 평가할 수 있기 때문에 더 합리적인 결정 가능. 또한, KL divergence term을 통해 ref model과 거리를 유지하며 새로운 데이터에 과도하게 벗어나지 않도록 regularization됨.
+  - (y1, y2, y3의 샘플을 통한 예시. DPO가 분포 밖 응답에 유리한 편향된 정책을 생성할 수 있음 시사) ![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/30fe302c-7828-4d02-926b-cc86a7e57c0a)
+
+■ DPO/PPO 실험 검증
+- SafeRLHF(helpfulness와 safety에 대한 preference pair 데이터)를 통한 검증 수행
+- 목표: SFT, PPO, DPO를 통해 콘텐츠 생성의 안전을 우선시하는 LLM을 훈련.
+- (학습 방법에 따른 모델 성능 비교)![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/bb6a4d1f-cb55-4c25-995a-38e706c861bf)
+  * + filter dual-unsafe: SafeRLHF 데이터셋에서 양쪽 응답이 모두 안전하지 않은 데이터를 필터링
+  * + filter dual-safe: SafeRLHF 데이터셋에서 양쪽 응답이 모두 안전한 데이터를 필터링
+  * Iterative DPO: DPO를 여러 stage로 반복 학
+  * Help: helpfullness 양일수록 긍정적
+  * Harm: 음수일수록 긍정적
+  * S.R(Safety Rate; 안전율): 높을수록 긍정적
+- 기본 모델의 영향
+  - SFT(Alpaca)모델을 참조 모델로 사용할 때, DPO는 S.R이 55.4%로 낮음. 이것이 기본 모델의 출력과 선호 데이터 간 분포 이동 때문이라 추측.
+  - 선호 데이터 분포의 영향도 감소를 위해 SafeRLHF 데이터셋에서 SFT(safe)를 추가 fine tuning한 후 DPO를 재학습하면 이러한 문제가 다소 해결됨. 
+  - But, PPO를 활용한 것보다는 부족
+- 선호(preference) 데이터의 민감도
+  - SafeRLHF 데이테셋에서 dual-safe한 데이터를 모두 제거하면 S.R이 크게 향상되지만 Helpfulness가 감소하는 것으로 미루어 과도한 필터링은 DPO 성능에 해로울 수 있음
+- 선호 데이터 분포 영향
+  - 추가 데이터를 수집하는 것이 성능에 이점이 있는지 추가 분석 수행
+  - 기존 선호 데이터 대신 SFT(Safe)로 새로운 응답을 생성 후, 학습된 reward model을 통해 rabeling 하고 이 데이터로 DPO를 반복적으로 학습
+  - 결론적으로 **Iterative DPO 방법을 통해 추가적인 개선 가능.** PPO의 helpfulness에는 미치지 못하나 S.R은 더 높은 수치.
+- 실용적 고찰
+  - DPO 성능은 모델과 선호 데이터셋 간의 분포 이동을 완화함으로써 향상될 수 있음 확인.
+  - 분포 이동과 데이터의 noise 문제 완화를 위해 iterative한 DPO 학습 방법 권장.
+  - 단, 완벽한 데이터가 반복적으로 추가되더라도 코드 생성과 같은 어려운 작업에서는 여전히 만족스럽지 않을 수 있음(아래에서 확인)
+  
+
+  
