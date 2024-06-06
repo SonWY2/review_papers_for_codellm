@@ -73,6 +73,18 @@ github: x
   - 결론적으로 APPS 데이터 측정과 유사한 결론 도달. DPO를 반복해도 오히려 성능이 저하됨.
   (Code Contest pass@ 결과) ![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/4ef06ef9-392b-454c-ac02-2b9fe0a2c28f)
   * 10@1k: 문제 설명에 있는 공개 테스트에서 1000개의 샘플이 평가되고, 그 중 10개만 숨겨진 테스트에 제출되는 것 의미.
+
+[PPO의 성능을 향상시킬 수 있는 요소]
+- PPO의 성능을 향상시킬 수 있는 주요 요소 조사
+  - advantage normalization, large-batch-size training, exponential moving average를 사용한 refence 모델 업데이트
+- DeepSpped-Chat기반으로 각 토큰에 reward를 할당하는 대신 각 응답에 스칼라 보상을 사용하여 측정.
+- HH-RHLF 및 APPS와 Codecontest와 같은 task에서 실험 수행
+- 결론:
+  (HH-RLHF/APPS/CodeContest 데이터에 대한 PPO Ablation 결과) ![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/11e886ed-1ac7-4a80-b5eb-5912ce29770b)
+  - advantage normalization은 PPO 훈련을 안정화 시키고 성능을 향상시킬 수 있음
+  - large-batch-size training은 특히 코드 생성 작업에서 가장 큰 성능 향상 포착
+    (APPS에서 batch size 크기 변화에 따른 pass@ 비교) ![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/8813a1db-37d1-4759-a7b2-9c9135ec6c50)
+  - exponential moving average는 추가적인 성능 향상 제공 가능
  
 [결론]
 - DPO는 기본 모델 출력과 선호 데이터간의 분포 이동에 지나치게 민감함
