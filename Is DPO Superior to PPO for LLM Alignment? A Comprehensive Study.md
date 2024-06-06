@@ -17,7 +17,8 @@ github: x
   - 반면에 PPO는 reward model을 통해 OOD 샘플을 평가할 수 있기 때문에 더 합리적인 결정 가능. 또한, KL divergence term을 통해 ref model과 거리를 유지하며 새로운 데이터에 과도하게 벗어나지 않도록 regularization됨.
   - (y1, y2, y3의 샘플을 통한 예시. DPO가 분포 밖 응답에 유리한 편향된 정책을 생성할 수 있음 시사) ![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/30fe302c-7828-4d02-926b-cc86a7e57c0a)
 
-■ DPO/PPO 실험 검증
+[실험/검증]
+■ SafeRLHF 데이터셋에 대한 DPO/PPO 실험 검증
 - SafeRLHF(helpfulness와 safety에 대한 preference pair 데이터)를 통한 검증 수행
 - 목표: SFT, PPO, DPO를 통해 콘텐츠 생성의 안전을 우선시하는 LLM을 훈련.
 - (학습 방법에 따른 모델 성능 비교)![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/bb6a4d1f-cb55-4c25-995a-38e706c861bf)
@@ -29,7 +30,8 @@ github: x
   * S.R(Safety Rate; 안전율): 높을수록 긍정적
 - 기본 모델의 영향
   - SFT(Alpaca)모델을 참조 모델로 사용할 때, DPO는 S.R이 55.4%로 낮음. 이것이 기본 모델의 출력과 선호 데이터 간 분포 이동 때문이라 추측.
-  - 선호 데이터 분포의 영향도 감소를 위해 SafeRLHF 데이터셋에서 SFT(safe)를 추가 fine tuning한 후 DPO를 재학습하면 이러한 문제가 다소 해결됨. 
+  - 선호 데이터 분포의 영향도 감소를 위해 SafeRLHF 데이터셋에서 SFT(safe)를 추가 fine tuning한 후 DPO를 재학습하면 이러한 문제가 다소 해결됨.
+  - 표에서 보이듯이 분포 이동 문제를 해결하면 S.R이 16.4% 증가하고 help reward가 -4.19에서 -1.52까지 증가함.
   - But, PPO를 활용한 것보다는 부족
 - 선호(preference) 데이터의 민감도
   - SafeRLHF 데이테셋에서 dual-safe한 데이터를 모두 제거하면 S.R이 크게 향상되지만 Helpfulness가 감소하는 것으로 미루어 과도한 필터링은 DPO 성능에 해로울 수 있음
@@ -42,5 +44,17 @@ github: x
   - 분포 이동과 데이터의 noise 문제 완화를 위해 iterative한 DPO 학습 방법 권장.
   - 단, 완벽한 데이터가 반복적으로 추가되더라도 코드 생성과 같은 어려운 작업에서는 여전히 만족스럽지 않을 수 있음(아래에서 확인)
   
+■ 추가 실험
+- 타 RLHF 방법론의 정렬 방법 추가 비교
+  - OpenAssistant Reward 모델로 평가 점수 비교(높을수록 좋음)
+  - PRO(Preference ranking optimization), RRHF(pangu-coder2의 RRTF 방법론)을 추가 비교 분석
+  - RRHF와 PRO는 DPO와 PPO보다 못했으며 PPO가 제일 선호되는 답변 생성
+    (HH-RLHF test set에 대한 결과) ![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/2e220d62-3b5c-4410-9bce-c41564afdb2e)
 
-  
+- base 모델 변경에 따른 비교 분석
+  (LLaMA 1/2 7B 모델의 SafeRLHF 벤치마크 결과) ![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/0497bd0c-4da6-4df9-8948-5af1eb0a16b3)
+  * Beaver: 공식으로 릴리즈된 모델.
+  - LLaMA 모델 학습에서도 PPO가 대체로 우수하며 안정적임.
+
+- 도전적인 작업(code generation)에 대한 DPO/PPO 실험 검증
+
