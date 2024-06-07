@@ -52,7 +52,7 @@ github: x
   (HH-RLHF test set에 대한 결과) ![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/2e220d62-3b5c-4410-9bce-c41564afdb2e)
 
 ■ base 모델 변경에 따른 비교 분석
-(LLaMA 1/2 7B 모델의 SafeRLHF 벤치마크 결과) ![image](https://github.com/SonWY2/paper_caputred_images_repo/assets/36894403/0497bd0c-4da6-4df9-8948-5af1eb0a16b3)
+(LLaMA 1/2 7B 모델의 SafeRLHF 벤치마크 결과) 
 * Beaver: 공식으로 릴리즈된 모델.
 - LLaMA 모델 학습에서도 PPO가 대체로 우수하며 안정적임.
 
