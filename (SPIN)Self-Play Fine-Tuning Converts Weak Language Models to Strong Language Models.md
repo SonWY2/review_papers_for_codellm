@@ -12,4 +12,4 @@ Can we empower a weak LLM to improve itself without acquiring additional human a
 
 [SPIN]
 - 추가적인 사람 또는 AI 피드백에 의존하지 않고 LLMs의 성능을 향상시킬 수 있는 새로운 finetuning 방법
-  - 일반적으로 파인튜닝된 $LLMp_\theta_0$
+  - 일반적으로 파인튜닝된 $LLMp$
