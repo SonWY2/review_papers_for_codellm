@@ -1,0 +1,16 @@
+release-date: 2024-06-07
+arxiv: https://arxiv.org/abs/2402.10110
+github: https://github.com/tianyi-lab/Reflection_Tuning
+
+
+[개요]
+- **IFD 데이터 큐레이션 방법을 개선한 후속 연구**
+- Selective Reflecion-Tuning
+  - Teacher 모델의 reflection과 introspection(자기성찰)을 활용하여 기존 데이터 품질 향상시키고 Student LLM의 데이터 선택 기능을 활용하여 자동으로 기존 instruction dataset을 개선하는 패러다임
+  - IFD와 그 반대개념인 reversed-IFD를 사용하여 학습하려는 모델에서 데이터의 품질을 측정하고 저품질 데이터를 Teacher모델을 통해 개선하는 프로세스
+
+
+
+
+
+
