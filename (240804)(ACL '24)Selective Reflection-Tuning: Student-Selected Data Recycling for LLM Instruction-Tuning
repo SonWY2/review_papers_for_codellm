@@ -8,9 +8,54 @@ github: https://github.com/tianyi-lab/Reflection_Tuning
 - Selective Reflecion-Tuning
   - Teacher 모델의 reflection과 introspection(자기성찰)을 활용하여 기존 데이터 품질 향상시키고 Student LLM의 데이터 선택 기능을 활용하여 자동으로 기존 instruction dataset을 개선하는 패러다임
   - IFD와 그 반대개념인 reversed-IFD를 사용하여 학습하려는 모델에서 데이터의 품질을 측정하고 저품질 데이터를 Teacher모델을 통해 개선하는 프로세스
+    <전체 파이프라인> ![image](https://github.com/user-attachments/assets/e861713c-cf7b-449c-9e69-3fb9577eb53c)
 
 
-
+[방법론]
+■ 1단계: Selective Reflection on Instruction
+- Teacher 모델을 통해 원본 데이터셋 (x, y)를 개선한 새로운 쌍 (x', y') 을 생성.
+  <Instruction Reflection Prompt>
+  ```
+  System Prompt
+  You are a helpful, precise but picky assistant for checking the quality of a given instruction.
+  User Prompt
+  [Instruction]
+  Instruction
+  [The Start of Answer]
+  Answer
+  [The End of Answer]
+  We would like you to answer several questions related to the quality of a given instruction.
+  1. Why this instruction is not good? First analyze the instruction based on the Complexity of the Topic,
+  Level of Detail Required, Knowledge Required, Ambiguity of the Instruction and Logical Reasoning or
+  Problem-Solving Involved. Then analyze why this answer is not good for the given instruction based on
+  the Helpfulness, Relevance, Accuracy and Level of Details. Finally, analyze why this bad instruction
+  leads to a bad answer.
+  2. Based on the reason you provided, generate a new and complete instruction that is complex and
+  difficult to answer directly. Make sure the new instruction is relevant but independent to the original
+  instruction, which can be answered without knowing the original instruction, put the new instruction in
+  the format of [New Instruction] your instruction [End]
+  3. Answer the newly generated instruction as detailed as possible, in the format of [New Answer] your
+  answer [End]
+  ```
+  <Response Reflection Prompt>
+  ```
+  System Prompt
+  You are a helpful, precise but picky assistant for checking the quality of the answer to a given instruction.
+  User Prompt
+  [Instruction]
+  Instruction
+  [The Start of Answer]
+  Answer
+  [The End of Answer]
+  We would like you to answer several questions related to the quality of the answer to the given
+  instruction.
+  1. Why this answer is not good for the given instruction? Analyze based on the Helpfulness, Relevance,
+  Accuracy, and Level of Details.
+  2. Based on the reason you provided, generate a better answer, new and complete, as detailed as possible,
+  in the format of [Better Answer] your answer [End]
+  ```
+- 새롭게 생성된 (x', y') 쌍에 대하여 IFD 기준으로 기존 쌍 데이터와 점수를 비교하여 개선 여부를 판단.
+■ 2단계: Selective Reflection on Response
 
 
 
