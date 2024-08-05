@@ -102,7 +102,8 @@ github: https://github.com/tianyi-lab/Reflection_Tuning
   - 57번 승리 / 23번 무승부 / 28번 패배; 총 108번. 효과적임
  
 [Ablation Study]
-< sRecycled WizardLM vs >![image](https://github.com/user-attachments
+< sRecycled WizardLM vs >  ![image](https://github.com/user-attachments/assets/dc35eb85-0cd5-4c9f-a3a3-bb19bb919790)
+
 1) Reflection에 대한 ablation
 - Reflect on Ins. / Reflect on Res. 각 항목에 대해서만 reflection 된 모델
 - Reflect on Ins. + Res. 모든 항목에 대해 reflection 되었지마 선별과정 x
