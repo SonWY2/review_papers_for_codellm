@@ -30,17 +30,17 @@ github: https://github.com/InternLM/AlchemistCoder
 - 멀티 소스 데이터의 충돌 완화를 위해 Alchemist Prompt 방법을 통해 각 데이터별 prompt 커스터마이징 할 것을 제안.
 - Alchemist prompt와 GPT-4를 사용하여 instruction을 커스터마이징.
   - ** 세부 Alchemist Prompt ** ![image](https://github.com/user-attachments/assets/9b53949f-64c8-47e8-9669-912c66ca4934)
-  - 예시) 전체 프로세스 개요의 (c) 그림 참고
+  - 예시) ![image](https://github.com/user-attachments/assets/25f838fd-65fc-4dd2-a99a-7bcf6b96ece8)
 - ablation 실험 결과 전체 샘플의 5%만 Alchemist prompt로 보정하여 통합하면 멀티 소스 데이터의 융합으로 인한 다양성 및 도메인 격차 사이의 균형을 맞추고 최적 성능 달성 가능
 
 ■ Code comprehension task
 - 코드 과제에 대한 이해력 향상을 위해 Instruction evolution, Data Filtering, Code Review 3 가지 코드 과제를 추가로 구성함
 - Instruction evolution
-  - **프롬프트**
+  - **프롬프트 및 예시** ![image](https://github.com/user-attachments/assets/e30326cd-e23d-4733-9e4c-8deb41f39b51)
   - GPT-3 채택
   - 다양하고 복잡한 Instruction을 생성한다는 원 논문의 취지보다 본 논문에서는 해당 방법을 통합함으로써 모델이 진화 전후의 차이를 식별함으로써 요구 사항, 복잡도 등 코드 관련 개념에 대한 이해가 확대된다고 주장
 - Data Filtering
-  - **프롬프트**
+  - **프롬프트 및 예시** ![image](https://github.com/user-attachments/assets/ddcce14b-af7b-484c-9d98-ce1b171b10bc)
   - 품질이 낮은 데이터 범주 식별
   - 기준:
     - Short Responses: 지나치게 짧고 코드가 부족한 응답
@@ -49,7 +49,8 @@ github: https://github.com/InternLM/AlchemistCoder
     - Disorganized code: 함수 형식 구성에 관한 지침의 요구 사항 미준수
   - 필터링 된 데이터는 반대 예제를 제공하여 재활용함
 - Code Review
-  - **프롬프트**
+  - **프롬프트 ** ![image](https://github.com/user-attachments/assets/0699ce3b-ca8c-451c-944f-c8455cbc067d)
+  - ** 예시 ** ![image](https://github.com/user-attachments/assets/efb539f0-f6d7-46cc-a04b-783068d24515)
   - 모델이 코드를 검토하고 정확성 및 명확성에 대해 0~10점의 점수를 할당하도록 함
   - 또한 코드 개선에 대한 제안을 제시하고 개선된 코드를 제시하도록 함
 
