@@ -68,8 +68,8 @@ google deepmind
 - pass@1 accuracy
 - maj@k (k = 1, 4, 8, 16) : temperature 0.7로 k개 솔루션 생성 후 다수결로 최종 답변 선택
 ■ 합성 데이터 평가: 
-- coverage@k
-- diversity@k
+- coverage@k: k개의 솔루션을 샘플링했을 때, 최소 하나의 정확한 솔루션을 가진 고유한 문제의 비율
+- diversity@k: k개의 솔루션을 샘플링했을 때, 문제당 평균 고유 정확 솔루션의 수
 - false positive rate (FPR): 인간 평가 및 Gemini-Pro-1.5 자동 평가
   - 인간 평가: 각 모델에서 무작위로 50개 솔루션 선택
   - 자동 평가: Gemini-Pro-1.5를 사용하여 500개 솔루션 평가
