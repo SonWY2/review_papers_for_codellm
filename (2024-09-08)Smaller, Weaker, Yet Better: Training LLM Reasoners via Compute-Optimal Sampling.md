@@ -151,7 +151,8 @@ google deepmind
   - Flash에서 5개 솔루션/문제 (Pro의 0.15배 비용)로도 Pro보다 우수한 성능 달성
   - Gemma-7B: 19.1%, Gemma2-9B: 9.8%, Gemma2-27B: 5.7%의 상대적 이득
 
-(Figure 10: Finetuning Gemma models with Gemini-1.5 data)
+![image](https://github.com/user-attachments/assets/71f61754-acc4-4d20-a130-83e8dbb2aad1)
+< Finetuning Gemma with Gemini-1.5 data >
 
 [결론 및 향후 전망]
 - small LLM의 추론 성능이 큰 LLM보다 빠르게 향상되고 있어, 이 연구 결과의 중요성이 앞으로 더욱 커질 것으로 예상됨
