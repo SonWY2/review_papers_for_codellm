@@ -1,0 +1,123 @@
+
+[개요]
+- Instruction Tuning (IT) 의 한계에 대해 심층적으로 분석한 논문
+  - LFT (Lora Fine-Tuning)와 SFT (Supervised Fine-tuning; Full parameter) 로 분류하여 그 학습의 효과를 분석
+- 주요 발견:
+  - IT는 LLM의 지식이나 기술을 향상시키는 것에 회의적
+  - IT 데이터셋의 응답 패턴을 모방하는 것은 응답 품질 저하로 이어짐  
+  - 전체 파라미터 미세조정은 지식 학습 효과가 있으나 환각을 증가시킴
+  - IT를 개선하기 위한 기존 방법들(NEFTTune, WizardLM 등)은 성능 향상에 크게 기여하지 못함
+- 사전학습된 지식에만 의존한 응답이 IT로 새롭게 학습한 지식을 활용한 응답보다 일관되게 더 나은 성능을 보임
+
+[실험 설정]
+■ LLM 모델
+- LLaMa-2 7B, 13B, 70B
+- Mistral-v0.1 7B
+- Phi-1.5 1.3B
+
+■ 파인튜닝 데이터셋
+- 합성 데이터셋: Alpaca 52k, MedInstruct 52k(domain adaptation의 효과 분석용) 
+- 사람이 작성한 데이터셋: LIMA 1K, databricks-dolly 15k
+- 혼합 데이터셋: Tulu-V2-Mix 326k
+
+■ 평가 데이터셋 
+- just-eval-instruct 1k: 9개 기존 데이터셋에서 추출한 1,000개의 다양한 instruction
+- MedInstruct-test 216: 의료 도메인 평가용 216개 instruction-response 쌍
+
+■ 파인튜닝 방법
+- LoRA 파인튜닝 (LFT): 저랭크 근사를 통해 일부 파라미터만 조정
+- 전체 파라미터 파인튜닝 (SFT): 모든 또는 대부분의 가중치를 조정
+
+■ 평가 방법
+- GPT-4 Turbo를 이용한 자동 평가: 유용성, 명확성, 사실성, 깊이, 참여도 등 5가지 측면에서 1-5점 평가
+- 전문가 인력을 통한 수동 평가
+
+[IT는 지식 향상제가 아니다]
+- LFT 후 생성된 응답은 사전 훈련된 지식과 밀접하게 일치함
+- SFT의 경우 새로운 지식 습득을 나타내지만 새로운 지식이 종종 응답 품질 저하로 이어지며, 사전 훈련 지식에 의존할 경우가 더 사실적이고 유용한 응답을 생성함.
+
+■ Finding 1. LFT 응답은 원래의 사전학습 지식과 밀접하게 연관되어 있지만, SFT는 그렇지 않음
+- KL Divergence를 통한 토큰 분포 분석을 통해 LFT와 SFT의 차이를 비교
+  - 일정 부분의 입력 시퀀스 제시 후 greedy decoding을 통한 응답 수집
+  - Base 모델에서 수집된 응답과 Align된 모델에서의 수집된 응답 토큰의 분포 비교.
+- LFT는 토큰 분포의 변화가 미미하여 사전학습 지식에 크게 의존
+  - 즉, 특정 맥락(입력 시퀀스)가 주어졌을 때, Base 모델이 출력하는 토큰과 유사한 토큰 출력 = base모델과 지식 일치
+- 반면, SFT는 토큰 분포의 변화가 크며, 이는 사전학습 지식에서 크게 벗어난 것을 의미
+- IT 데이터셋 크기 확대는 LFT의 토큰 분포 변화에 거의 영향을 미치지 않음
+- 더 큰 모델일수록 LFT와 SFT 모두에서 분포 변화가 적음
+![image](https://github.com/user-attachments/assets/669e853f-6fad-47d4-a27a-81f8d9839115)
+(IT 이후의 토큰 분포 변화)
+![image](https://github.com/user-attachments/assets/7a1f5920-6770-42ab-9a1c-a87aa4ddeb3f)
+(데이터 스케일링은 LoRA 튜닝에 효과X)
+
+
+■ Finding 2. LFT는 주로 응답 시작에만 영향을 미치고, 대부분의 답변은 사전학습 지식에서 유래한다.
+- 응답의 처음 5%와 나머지 95% 토큰에 대한 KL Divergence 분석 수행
+- LFT는 문장 초반 5%에서 높은 KL Divergence를 보이다 급격히 감소
+- SFT는 문장 전반에 걸쳐 높은 KL Divergence 유지
+- LFT는 주로 문장이나 사실 시작부를 학습하는 반면, SFT는 전체 응답에 걸쳐 새로운 지식을 학습
+(Figure 4: KL Divergence analysis between the probability distribution of response tokens from fine-tuned models and their pre-trained only counterparts)
+
+Finding 3. LFT에서는 스케일링이 효과적이지 않다.
+- IT 데이터셋을 52배, 326배로 확장해도 LFT 모델의 성능은 크게 향상되지 않음
+- 의료와 같은 전문 도메인에서도 동일한 현상 관찰
+- LFT는 새로운 지식이나 기술을 학습하지 않고 주로 사전학습 지식에 의존
+(Figure 2: Dataset scaling is ineffective for LFT)
+
+Finding 4. 현재로서는 사전학습된 지식이 지배적이다.
+- LFT는 새로운 지식 습득 없이 응답 시작만을 학습
+- SFT의 큰 토큰 분포 변화는 새로운 지식 습득을 시사
+- 그러나 사전학습 지식에 기반한 LFT 응답이 SFT보다 사실성과 유용성 면에서 우수
+- 도메인별 특화 모델(예: 의료)도 오픈 도메인 LFT 모델보다 성능이 떨어짐
+(Figure 3: Pre-trained knowledge outperforms new knowledge learned with SFT)
+
+[패턴 복사가 성능을 저하시킨다]
+- 패턴 복사: LLM이 IT 데이터셋의 응답 특성을 모방하는 현상
+  1) 톤 모방: IT 데이터셋의 토큰을 사용하는 경향
+  2) 스타일 모방: IT 데이터셋의 전반적인 스타일 특성을 모방
+
+Finding 1. LFT와 SFT는 톤 모방을 다르게 학습한다.
+- LFT: 주로 스타일 토큰과 응답 시작 토큰에서 변화 발생
+- SFT: 모든 종류의 토큰에서 변화 발생
+- SFT에서는 IT 데이터셋의 토큰을 과도하게 차용하는 경향이 있음 (약 81.2%)
+(Figure 12a, 12b: Frequency distribution plot of top 125 shifted and marginal for LLaMa-2 7B trained on LIMA 1K and inferred on just-eval-instruct 1k)
+
+Finding 2. 스타일 모방은 응답 품질을 저하시킬 수 있다.
+- IT 데이터셋의 응답 길이와 모델 출력 응답 길이 간 양의 상관관계 존재
+- 긴 응답을 생성하려는 경향이 부정확한 정보나 환각으로 이어질 수 있음
+- 모델이 충분한 지식이 없는 경우에도 긴 응답을 생성하려 시도하여 환각 발생
+(Figure 5: Style Imitation affects response quality)
+
+해결책 제안: IT 데이터셋의 응답 단순화
+- GPT-4를 사용해 LIMA 1K 데이터셋의 응답을 간결하게 재작성 (LIMA-Simple 1k)
+- 단순화된 데이터셋으로 학습한 모델이 환각은 줄이면서 사실성과 유용성 향상
+(Figure 6: Human study comparing responses of a model fine-tuned on LIMA 1K and LIMA-Simple 1k)
+
+[환각의 인과 분석]
+Finding 1. SFT는 모델의 환각을 증가시키며, 이는 훈련 데이터셋과 응답 사이의 잘못된 인과 관계에서 비롯된다.
+- SFT로 학습된 모델은 IT 데이터셋의 토큰을 부적절하게 차용하는 경향이 있음
+- 환각의 약 72%가 IT 데이터셋에 존재하는 구문과 일치
+- 모델은 IT 데이터셋에서 유사한 개념을 설명하는 인스턴스의 토큰을 잘못 차용하는 경향이 있음
+- 전문가 평가 결과, SFT 모델의 환각 중 87%가 IT 데이터셋과 인과적으로 연관됨 (LFT는 13.9%)
+(Figure 7: Illustration of hallucinations and their source of origin)
+(Figure 8: Human study of hallucinations by LLaMa-2 7B trained on LIMA 1K and databricks-dolly 15k and evaluated on just-eval-instruct 1k)
+
+Finding 2. 추가 발견사항
+- 환각의 정확한 원인을 추적하기 어려움
+- 개념 유사성이 환각에 미치는 영향을 정량화하기 어려움
+- IT 데이터셋의 품질과 무관하게 SFT 후 LLM의 환각 경향이 증가
+
+[IT 개선 방법들의 비효과성]
+- AlpaGasus (데이터셋 필터링), WizardLM (복잡한 지시문 생성), NEFTune (임베딩에 노이즈 추가) 등의 방법 비교
+- 모든 방법이 단순 SFT보다는 나은 성능을 보이지만, LFT 모델의 성능을 넘어서지 못함
+- 사전학습된 지식이 여전히 지배적이며, 이러한 방법들의 정확한 이점은 추가 연구가 필요
+(Figure 9: Comparison of various methods proposed in literature to improve IT)
+
+[결론 및 향후 연구]
+- IT의 여러 한계점 발견: LFT의 비효율적 확장성, SFT와 패턴 복사로 인한 환각 증가, 기존 개선 방법의 한계 등
+- 향후 연구 방향:
+  1) 환각 감지 및 완화를 위한 공식적 프레임워크 개발
+  2) 사전학습 지식을 넘어서는 성능 향상을 위한 새로운 IT 방법 연구
+  3) DPO, RLHF 등 고급 정렬 방법의 효과 연구
+  4) 검색 증강 생성(RAG)을 통한 지식 추출 분리 연구
+  5) 특정 작업 향상을 위한 맞춤형 IT 데이터셋의 효과 연구
