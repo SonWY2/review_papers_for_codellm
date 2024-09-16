@@ -1,3 +1,7 @@
+release-date: 2024-07-14
+arxiv: https://arxiv.org/abs/2402.05119v5
+github: x
+
 
 [개요]
 - Instruction Tuning (IT) 의 한계에 대해 심층적으로 분석한 논문
@@ -47,29 +51,31 @@
 - 더 큰 모델일수록 LFT와 SFT 모두에서 분포 변화가 적음
 ![image](https://github.com/user-attachments/assets/669e853f-6fad-47d4-a27a-81f8d9839115)
 (IT 이후의 토큰 분포 변화)
-![image](https://github.com/user-attachments/assets/7a1f5920-6770-42ab-9a1c-a87aa4ddeb3f)
-(데이터 스케일링은 LoRA 튜닝에 효과X)
 
-
-■ Finding 2. LFT는 주로 응답 시작에만 영향을 미치고, 대부분의 답변은 사전학습 지식에서 유래한다.
+■ Finding 2. LFT는 주로 응답 시작에만 영향을 미치고, 대부분의 답변은 사전학습 지식에서 유래.
 - 응답의 처음 5%와 나머지 95% 토큰에 대한 KL Divergence 분석 수행
 - LFT는 문장 초반 5%에서 높은 KL Divergence를 보이다 급격히 감소
 - SFT는 문장 전반에 걸쳐 높은 KL Divergence 유지
 - LFT는 주로 문장이나 사실 시작부를 학습하는 반면, SFT는 전체 응답에 걸쳐 새로운 지식을 학습
-(Figure 4: KL Divergence analysis between the probability distribution of response tokens from fine-tuned models and their pre-trained only counterparts)
+![image](https://github.com/user-attachments/assets/4cbcdda8-d154-43de-94e5-8bb963dd10b1)
+(base모델-IT된 모델의 응답 토큰 확률 분포 KL Divergence 비교)
 
-Finding 3. LFT에서는 스케일링이 효과적이지 않다.
+■ Finding 3. LFT에서는 스케일링이 효과적이지 않다.
 - IT 데이터셋을 52배, 326배로 확장해도 LFT 모델의 성능은 크게 향상되지 않음
 - 의료와 같은 전문 도메인에서도 동일한 현상 관찰
 - LFT는 새로운 지식이나 기술을 학습하지 않고 주로 사전학습 지식에 의존
-(Figure 2: Dataset scaling is ineffective for LFT)
+![image](https://github.com/user-attachments/assets/7a1f5920-6770-42ab-9a1c-a87aa4ddeb3f)
+(데이터 스케일링은 LoRA 튜닝에 효과X)
 
-Finding 4. 현재로서는 사전학습된 지식이 지배적이다.
+■ Finding 4. 현재로서는 사전학습된 지식이 지배적이다.
 - LFT는 새로운 지식 습득 없이 응답 시작만을 학습
 - SFT의 큰 토큰 분포 변화는 새로운 지식 습득을 시사
 - 그러나 사전학습 지식에 기반한 LFT 응답이 SFT보다 사실성과 유용성 면에서 우수
 - 도메인별 특화 모델(예: 의료)도 오픈 도메인 LFT 모델보다 성능이 떨어짐
-(Figure 3: Pre-trained knowledge outperforms new knowledge learned with SFT)
+- 단, LLaMa-2-7B-chat모델(이미 meta에 의해 IT된 버전)은 모든 파인 튜닝 모델보다 우수했음
+  - 대규모 IT 데이터 셋이나 RLHF 때문이라 추측
+![image](https://github.com/user-attachments/assets/34ccfa8f-2232-4450-b319-f7d8e3b6f384)
+(사전 훈련된 지식이 SFT로 학습한 새로운 지식보다 보통 우수함)
 
 [패턴 복사가 성능을 저하시킨다]
 - 패턴 복사: LLM이 IT 데이터셋의 응답 특성을 모방하는 현상
