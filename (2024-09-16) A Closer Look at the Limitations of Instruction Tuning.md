@@ -79,36 +79,51 @@ github: x
 
 [패턴 복사가 성능을 저하시킨다]
 - 패턴 복사: LLM이 IT 데이터셋의 응답 특성을 모방하는 현상
-  1) 톤 모방: IT 데이터셋의 토큰을 사용하는 경향
-  2) 스타일 모방: IT 데이터셋의 전반적인 스타일 특성을 모방
+  - 유형 1# 톤 모방: IT 데이터셋의 토큰을 사용하는 경향
+  - 유형 2# 스타일 모방: IT 데이터셋의 전반적인 스타일 특성을 모방
+- 패턴 복사는 모델의 환각을 증가시킴. 이러한 환각은 IT 데이터셋의 토큰에서 차용되어 발생함.
 
-Finding 1. LFT와 SFT는 톤 모방을 다르게 학습한다.
+■ Finding 1. LFT와 SFT는 톤 모방을 다르게 학습
 - LFT: 주로 스타일 토큰과 응답 시작 토큰에서 변화 발생
 - SFT: 모든 종류의 토큰에서 변화 발생
 - SFT에서는 IT 데이터셋의 토큰을 과도하게 차용하는 경향이 있음 (약 81.2%)
-(Figure 12a, 12b: Frequency distribution plot of top 125 shifted and marginal for LLaMa-2 7B trained on LIMA 1K and inferred on just-eval-instruct 1k)
 
-Finding 2. 스타일 모방은 응답 품질을 저하시킬 수 있다.
+■ Finding 2. 스타일 모방은 응답 품질을 저하시킬 수 있다.
 - IT 데이터셋의 응답 길이와 모델 출력 응답 길이 간 양의 상관관계 존재
 - 긴 응답을 생성하려는 경향이 부정확한 정보나 환각으로 이어질 수 있음
 - 모델이 충분한 지식이 없는 경우에도 긴 응답을 생성하려 시도하여 환각 발생
-(Figure 5: Style Imitation affects response quality)
+- 단, 모델이 이미 주제에 대한 충분한 지식을 가지고 있을 경우 환각을 초래하지 않으면서 응답 품질을 향상시킬 수 있
+![image](https://github.com/user-attachments/assets/46e51824-994b-4d9c-b97d-fa3502bd3ac6)
+(응답 길이에 따른 환각 발생)
+※ 4, 5 지침 응답은 핵심을 올바르나 응답의 길이를 모방하는 과정에서 환각 발생.
+※ 환각의 정보(단어)는 IT 데이터셋에서 유래되었음
 
-해결책 제안: IT 데이터셋의 응답 단순화
+
+■ 제안된 해결책: IT 데이터셋의 응답 단순화
 - GPT-4를 사용해 LIMA 1K 데이터셋의 응답을 간결하게 재작성 (LIMA-Simple 1k)
 - 단순화된 데이터셋으로 학습한 모델이 환각은 줄이면서 사실성과 유용성 향상
-(Figure 6: Human study comparing responses of a model fine-tuned on LIMA 1K and LIMA-Simple 1k)
+- 다른 해결책은 SFT대신 LFT를 사용하는 것. LFT는 스타일 요소만 학습하는 경향이 있기 때문. 단, 지식 증강 역할은 X
+![image](https://github.com/user-attachments/assets/77d30296-f7b7-4afb-ad99-7eca8ddcf2d6)
+(LIMA-1k와 단순화된 응답을 가진 LIMA-Simple 1k로 IT된 모델을 비교한 인간 평가 결과)
+※ 1, 두 반응 모두 정확. 단 전자 > 후자
+※ 2, 두 반응 모두 정확. 단 정보적으로 다름
+※ 3, 두 반응 모두 부정확
+※ 4, 전자는 핵심 사실은 올바르나 응답을 길게 하기 위해 환각이 사용됨. 후자는 그렇지 않음
+※ 5, 전자는 핵심 사실이 환각이었지만 후자는 그렇지 않음.
+
 
 [환각의 인과 분석]
-Finding 1. SFT는 모델의 환각을 증가시키며, 이는 훈련 데이터셋과 응답 사이의 잘못된 인과 관계에서 비롯된다.
+■ Finding 1. SFT는 모델의 환각을 증가시키며, 이는 훈련 데이터셋과 응답 사이의 잘못된 인과 관계에서 비롯된다.
 - SFT로 학습된 모델은 IT 데이터셋의 토큰을 부적절하게 차용하는 경향이 있음
 - 환각의 약 72%가 IT 데이터셋에 존재하는 구문과 일치
 - 모델은 IT 데이터셋에서 유사한 개념을 설명하는 인스턴스의 토큰을 잘못 차용하는 경향이 있음
 - 전문가 평가 결과, SFT 모델의 환각 중 87%가 IT 데이터셋과 인과적으로 연관됨 (LFT는 13.9%)
-(Figure 7: Illustration of hallucinations and their source of origin)
-(Figure 8: Human study of hallucinations by LLaMa-2 7B trained on LIMA 1K and databricks-dolly 15k and evaluated on just-eval-instruct 1k)
+![image](https://github.com/user-attachments/assets/c734aa46-184b-40de-b3c1-e0b00ffe45d3)
+(IT데이터셋에서 유발된 환각 샘플)
+![image](https://github.com/user-attachments/assets/35910696-4010-430b-9736-f80e13aee04a)
+(학습된 모델의 환각이 IT 데이터셋에서 발생하였는지에 대한 인간 평가)
 
-Finding 2. 추가 발견사항
+■ Finding 2. 추가 발견사항
 - 환각의 정확한 원인을 추적하기 어려움
 - 개념 유사성이 환각에 미치는 영향을 정량화하기 어려움
 - IT 데이터셋의 품질과 무관하게 SFT 후 LLM의 환각 경향이 증가
