@@ -1,0 +1,122 @@
+Continuous Fine-tuning Without Loss
+Using Lora and Mergekit
+
+	In this write up we are going to be discussing how to perform continued Fine-tuning of open source AI models using Lora adapter and mergeking techniques and a library called mergekit. We will be using Unsloth for demonstration purposes for Fine-tuning, as it is the easiest library to fine-tune models that I know of with Lora. 
+	For those of you who don't know me, I’m Ramas Uzkurys, though most know me as Rombodawg. I started out merging models because I could not afford to finetune, until I got sponsored by TensorDock to finetune my own models, and thus my journey began to create free AI models that could compete with closed sourced AI. Now that intros are out of the way lets get into the meat and potatoes of the write up.
+	As pointed out in private discussion by prolific open-source fine-tuners such as Teknium from Nous-Research and Eric Hartord (Aka Cognitive Computations), Fine-tuning AI models after they have been already instruct fine-tuned, or otherwise fine-tuned by other techniques, only results in major loss(catastrophic forgetting) of knowledge and performance in the AI model. Why is that? I believe every time an AI model is trained it loses knowledge, or really updates to its weights, based on previous training. So if you pre-train a model, it gains knowledge from the pretraining data, then once you fine-tune it, it loses some of that pre-training data in favor of the fine-tuning data. This is why you may see sometimes that an instruct version of an AI model might actually score lower on some benchmarks than the pretrained version. So when you fine-tune a model that has previously been fine-tuned already, the weights get updated again, and not only are you suffering MAJOR loss(catastrophic forgetting) from the pre-training data, but you are also suffering substantial loss(catastrophic forgetting) from the previous fine-tuning that was conducted.
+	How then do we continue to finetune model weights without the major loss(catastrophic forgetting) that happens every time we update them? Well I’d like to introduce a method of (Lora + Ties-Merge) Tuning. Using Lora, we can choose where and when to apply the fine-tuned weights because we can merge the adapter to whatever model weights we want after the finetuning is complete. So after hours and hours of experiments, I have finally concluded on the secret formula to perfect Lora and Merging techniques that completely update the weights with the new parameters of the next finetunes, without losing any of the previous weights parameters/updates. 
+
+Lets looks at this on the next page.
+
+
+(For this example I am describe my “Replete-AI/Replete-LLM-Qwen2-7b_Beta-Preview” AI model but it can apply to any model )	
+
+
+Here is our secret sauce spells out:
+
+First we take the Base model: Qwen/Qwen2-7B
+Then we finetune it on an instruct dataset using the same chat format as the target model we are merging with. 
+Dataset: rombodawg/Everything_Instruct_8k_context_filtered
+Target merge model: Qwen/Qwen2-7B-Instruct
+Chat format (ChatML):
+```
+<|im_start|>system
+{}<|im_end|>
+<|im_start|>user
+{}<|im_end|>
+<|im_start|>assistant
+{}
+```
+We can use Unsloth to tune our Base model with the dataset to make things easier:
+https://colab.research.google.com/drive/1vIrqH5uYDQwsJ4-OO3DErvuv4pBgVwk4?usp=sharing
+
+After we tune our model we save the Lora
+```
+model.save_pretrained_merged("model", tokenizer, save_method = "lora",)
+model.push_to_hub_merged("hf/model", tokenizer, save_method = "lora", token = "")
+```
+Now is the fun part. We actually Take the Lora, and don't apply it to the Base model we just fine-tuned. We apply the Lora onto our Target model which in this case would be (Qwen/Qwen2-7B-Instruct). But we do not train on top of this model. It is very important that you do this exactly this way. Train on the Base, Apply lora on the Target. 
+
+Now we have our new model that is the lora merged with the Target model. Lets call it our Lora_model_7b. Now the real magic happens. We use mergekit to update all the weights.
+https://github.com/arcee-ai/mergekit
+
+We want to use all 3 versions of the model, the Base, Target, and Lora model in mergkit using the Ties Method. The example of how to merge these models is on the next page.
+
+
+Note This config bellow is outdated, see final page of the doc for the up to date config
+
+
+Mergekit.yaml
+```
+models:
+  - model: Lora_model_7b
+    parameters:
+      weight: 1
+  - model: Qwen_Qwen2-7B-Instruct
+    parameters:
+      weight: 1
+merge_method: ties
+base_model: Qwen_Qwen2-7B
+parameters:
+  normalize: true
+  int8_mask: true
+dtype: bfloat16
+```
+
+Finally we merge all the weights into 1 model, and we successfully updated the Target model, with our new fine-tuned weights, without losing any updates/parameters from the pretraining, the initial finetuning, or the second stage fine-tuning, resulting in a model that outclasses all 3 model used in the original merge.
+I just want to add that I tested like 10 different combinations or merges and Lora’s, and this method I came up with worked better than all the others, and better than all the non-merged models. It made the most coherent model overall with the best performance. Just for any skeptics.
+
+	Thank you for reading and I hope you make some great models with this method. All credits goes to Rombodawg/Ramas Uzkurys
+
+More on next page (IMPORTANT UPDATE)
+
+
+I actually learned its better to do the merge all in 1 time, even if you continue to finetune more times. Like this
+   models:
+     - model: Qwen2.5-7B-Instruct-Adapted-Finetune-1
+       parameters:
+         weight: 1
+     - model: Qwen2.5-7B-Instruct-Adapted-Finetune-2
+       parameters:
+         weight: 1
+     - model: Qwen2.5-7B-Instruct-Adapted-Finetune-3
+       parameters:
+         weight: 1
+     - model: Qwen2.5-7B-Instruct-Adapted-Finetune-4
+       parameters:
+         weight: 1
+     - model: Qwen2.5-7B-Instruct
+       parameters:
+         weight: 1
+   merge_method: ties
+   base_model: Qwen2.5-7B-Base
+   parameters:
+     normalize: true
+     int8_mask: true
+   dtype: bfloat16
+Rather than try to keep doing the method over and over and over. You are better off keeping the adapters in a safe place, and doing it this way. The final resulting model is much better.
+Some added clarification. What you are doing here is merging all the new lora’s/adapters with the target model, making new model weights for every lora you have, then merging all the resulting new models back into the target model and the base model with ties. You are not merging the loras on top of each other. Just in case that was confusing.
+Short update, but a very important one. Have fun. 
+Another update, adding weight and density to the all the models increases performance a lot on the final merge. Example on the next page
+
+
+
+
+   models:
+     - model: Qwen2.5-7B-Instruct-Adapted-Finetune-1
+       parameters:
+         weight: 1
+         density: 1
+     - model: Qwen2.5-7B-Instruct
+       parameters:
+         weight: 1
+         density: 1
+   merge_method: ties
+   base_model: Qwen2.5-7B-Base
+   parameters:
+     weight: 1
+     density: 1
+     normalize: true
+     int8_mask: true
+   dtype: bfloat16
+
