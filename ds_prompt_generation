@@ -1,0 +1,645 @@
+
+import random
+from typing import List, Dict, Set
+import hashlib
+import json
+
+
+class PromptGenerator:
+    def __init__(self):
+        # 난이도 분포 설정 추가
+        self.difficulty_distribution = {
+            "beginner": 0.15,  # 30%
+            "intermediate": 0.45,  # 40%
+            "advanced": 0.4  # 30%
+        }
+        self.task_difficulty = {
+            "data_loading": {"beginner": 0.5, "intermediate": 0.3, "advanced": 0.2},
+            "data_validation": {"beginner": 0.3, "intermediate": 0.4, "advanced": 0.3},
+            "data_cleaning": {"beginner": 0.4, "intermediate": 0.4, "advanced": 0.2},
+            "preprocessing": {"beginner": 0.3, "intermediate": 0.4, "advanced": 0.3},
+            "feature_engineering": {"beginner": 0.2, "intermediate": 0.4, "advanced": 0.4},
+            "feature_selection": {"beginner": 0.2, "intermediate": 0.5, "advanced": 0.3},
+            "data_transformation": {"beginner": 0.3, "intermediate": 0.4, "advanced": 0.3},
+            "data_integration": {"beginner": 0.2, "intermediate": 0.4, "advanced": 0.4},
+            "exploratory_analysis": {"beginner": 0.4, "intermediate": 0.4, "advanced": 0.2},
+            "evaluation": {"beginner": 0.4, "intermediate": 0.3, "advanced": 0.3},
+            "data_visualization": {"beginner": 0.4, "intermediate": 0.4, "advanced": 0.2},
+            "data_pipeline": {"beginner": 0.2, "intermediate": 0.3, "advanced": 0.5},
+            "error_handling": {"beginner": 0.3, "intermediate": 0.4, "advanced": 0.3}
+        }
+        self.task_templates = {
+            "data_loading": [
+                "Write a function to load {data_type} data from {source} and handle {issue}",
+                "Create code to import {data_type} from {source} and prepare it for analysis by handling {issue}",
+                "Implement a data loading function that reads {data_type} from {source} and deals with {issue}",
+                "Develop a robust data loader for {data_type} from {source} with {issue} handling",
+                "Build an efficient loading mechanism for {data_type} from {source} that addresses {issue}"
+            ],
+
+            "data_validation": [
+                "Create a validation function to check {data_type} data for {issue}",
+                "Implement comprehensive data quality checks to identify {issue} in the {data_type} dataset",
+                "Write code to validate {data_type} data integrity and detect {issue}",
+                "Develop a validation pipeline that verifies {data_type} consistency and flags {issue}",
+                "Build a data quality assessment system for {data_type} focusing on {issue}",
+                "Create an automated validation suite for {data_type} that monitors {issue}",
+                "Implement a validation framework to ensure {data_type} compliance with {requirement}",
+                "Write a data quality checker that validates {data_type} against {requirement}",
+                "Design a validation system that ensures {data_type} meets {requirement} while handling {issue}",
+                "Create validation rules for {data_type} that detect anomalies related to {issue}"
+            ],
+
+            "data_cleaning": [
+                "Write a function to clean {issue} from {data_type} data",
+                "Create a data cleaning pipeline to handle {issue} in {data_type} format",
+                "Implement a cleaning procedure for {data_type} data affected by {issue}",
+                "Build a robust cleaning mechanism for {data_type} that addresses {issue}",
+                "Develop an automated cleaning process for {data_type} focusing on {issue}"
+            ],
+
+            "preprocessing": [
+                "Create a preprocessing pipeline that handles {issue} and applies {transformation} to the features",
+                "Write code to clean the dataset by handling {issue} and implementing {transformation}",
+                "Develop a data preprocessing function that addresses {issue} using {transformation}",
+                "Build a preprocessing workflow that combines {transformation} while handling {issue}",
+                "Implement a feature preprocessing system applying {transformation} and managing {issue}"
+            ],
+
+            "feature_engineering": [
+                "Create features for {task_type} by applying {transformation} to the {data_type} columns",
+                "Implement feature engineering code for {task_type} that handles {issue} in the {data_type} data",
+                "Write a function to generate features for {task_type} using {transformation}",
+                "Design feature creation logic for {task_type} incorporating {transformation}",
+                "Develop advanced features for {task_type} by processing {data_type} data"
+            ],
+
+            "feature_selection": [
+                "Implement a feature selection method using {model_type} for {task_type}",
+                "Create code to select important features based on {metric} for {task_type}",
+                "Write a function to identify relevant features using {transformation} for {task_type}",
+                "Develop a feature importance analysis system using {model_type}",
+                "Build a feature ranking mechanism based on {metric}"
+            ],
+
+            "data_transformation": [
+                "Create a transformation pipeline that converts {data_type} using {transformation}",
+                "Implement code to transform {data_type} data applying {transformation}",
+                "Write functions to process {data_type} data with {transformation}",
+                "Design a data conversion system that transforms {data_type} through {transformation}",
+                "Develop a transformation workflow for converting {data_type} using {transformation}",
+                "Build an ETL process that handles {data_type} transformation with {requirement}",
+                "Create a data mutation pipeline that converts {data_type} while preserving {requirement}",
+                "Implement a transformation layer that processes {data_type} according to {requirement}",
+                "Write a data processing system that transforms {data_type} maintaining {requirement}",
+                "Develop a robust transformation mechanism that handles {data_type} variations"
+            ],
+
+            "data_integration": [
+                "Write code to merge {data_type} data from {source} with handling {issue}",
+                "Create a data integration pipeline combining multiple {data_type} sources",
+                "Implement functions to join {data_type} datasets while handling {issue}",
+                "Design a data consolidation system that merges {data_type} from {source}",
+                "Build an integration framework for multiple {data_type} sources handling {issue}",
+                "Develop a data fusion system that combines {data_type} while addressing {issue}",
+                "Create a robust integration pipeline for heterogeneous {data_type} sources",
+                "Implement a data synchronization mechanism for multiple {data_type} streams",
+                "Write an ETL process that integrates {data_type} from various {source}",
+                "Build a data harmonization system that unifies {data_type} from {source}"
+            ],
+
+            "exploratory_analysis": [
+                "Create code to analyze {data_type} data focusing on {metric}",
+                "Implement exploratory analysis functions for {data_type} examining {issue}",
+                "Write analysis code to investigate {issue} in {data_type} data",
+                "Develop a comprehensive EDA suite for {data_type} data exploration",
+                "Build an analysis toolkit that examines {data_type} patterns and {metric}",
+                "Create statistical analysis functions for {data_type} focusing on {metric}",
+                "Implement a data profiling system that analyzes {data_type} distributions",
+                "Write code to perform deep dive analysis on {data_type} characteristics",
+                "Design an automated EDA pipeline that discovers patterns in {data_type}",
+                "Develop analysis tools that uncover relationships in {data_type} data"
+            ],
+
+            "evaluation": [
+                "Create an evaluation function for the {model_type} that measures {metric}",
+                "Implement code to assess the {model_type} performance using {metric}",
+                "Write a function to evaluate the {task_type} model using {metric}",
+                "Design a comprehensive evaluation suite for {model_type}",
+                "Build a model assessment framework measuring multiple {metric}"
+            ],
+
+            "data_visualization": [
+                "Create visualization code for {data_type} data highlighting {issue}",
+                "Implement functions to visualize {data_type} patterns and {metric}",
+                "Write code to plot {data_type} data focusing on {transformation}",
+                "Design interactive visualizations for exploring {data_type} trends",
+                "Develop a visualization dashboard for {data_type} analysis",
+                "Build a comprehensive visualization suite for {data_type} insights",
+                "Create dynamic plots that showcase {data_type} patterns over time",
+                "Implement a visual analytics system for {data_type} exploration",
+                "Write visualization tools that reveal {data_type} relationships",
+                "Design an interactive visualization framework for {data_type} analysis"
+            ],
+
+            "data_pipeline": [
+                "Create an end-to-end pipeline for {task_type} handling {issue}",
+                "Implement a data processing pipeline for {data_type} with {requirement}",
+                "Write pipeline code for {task_type} ensuring {requirement}",
+                "Design a robust data workflow for {task_type} addressing {issue}",
+                "Develop a complete data processing system for {task_type}"
+            ],
+
+            "error_handling": [
+                "Implement error handling for {issue} in {data_type} processing",
+                "Create robust error handling for {model_type} dealing with {issue}",
+                "Write error handling code for {task_type} pipeline handling {issue}",
+                "Design a comprehensive error management system for {data_type}",
+                "Develop error recovery mechanisms for {task_type} processes"
+            ]
+        }
+
+        self.variations = {
+            # 기존 유지
+            "data_type": [
+                "CSV", "Excel", "SQL", "JSON", "time series", "categorical", "numerical",
+                "text", "image", "structured", "unstructured"
+            ],
+
+            # 기존 유지
+            "source": [
+                "local files", "database", "REST API", "multiple directories"
+            ],
+
+            "issue": [
+                # 기존 이슈들
+                "missing values", "outliers", "imbalanced classes", "inconsistent formats",
+                "duplicate records", "noise", "incorrect data types", "encoding issues",
+                "null values", "infinite values", "corrupted entries",
+                # 추가된 이슈들
+                "schema violations", "data drift", "concept drift", "data quality rules violation",
+                "versioning conflicts", "incomplete records", "data type mismatches",
+                "integrity constraints violation", "business rule violations",
+                "cross-validation errors", "timestamp inconsistencies", "join key mismatches",
+                "data freshness issues", "cardinality violations", "reference integrity issues"
+            ],
+
+            "transformation": [
+                # 기존 변환들
+                "scaling", "normalization", "encoding", "dimensionality reduction",
+                "feature selection", "binning", "aggregation", "smoothing",
+                "polynomial features", "interaction terms", "custom transformations",
+                # 추가된 변환들
+                "tokenization", "stemming", "lemmatization", "window functions",
+                "rolling statistics", "lag features", "frequency encoding",
+                "target encoding", "weight of evidence", "power transforms",
+                "quantile transforms", "spline transforms", "fourier transforms",
+                "wavelet transforms", "box-cox transformation", "yeo-johnson transformation",
+                "principal component analysis", "feature hashing", "bucketing"
+            ],
+
+            "model_type": [
+                # 기존 모델들
+                "Random Forest", "Gradient Boosting", "Neural Network", "Linear Regression",
+                "SVM", "Decision Tree", "KNN", "Ensemble", "Deep Learning",
+                "XGBoost", "LightGBM", "CatBoost",
+                # 추가된 모델들
+                "GRU", "ARIMA", "Prophet", "Gaussian Process",
+                "Isolation Forest", "One-Class SVM", "DBSCAN",
+                "Hidden Markov Model", "Naive Bayes", "Matrix Factorization"
+            ],
+
+            "task_type": [
+                # 기존 태스크들
+                "classification", "regression", "clustering", "time series prediction",
+                "anomaly detection", "recommendation", "ranking", "dimensionality reduction",
+                "sequence prediction", "pattern recognition",
+                # 추가된 태스크들
+                "feature importance analysis", "causal inference",
+                "survival analysis", "text classification", "sentiment analysis",
+                "entity resolution", "time series segmentation", "trend analysis",
+                "customer segmentation", "market basket analysis", "churn prediction",
+                "demand forecasting", "fraud detection", "root cause analysis"
+            ],
+
+            "requirement": [
+                # 기존 요구사항들
+                "high accuracy", "fast processing", "minimal memory usage",
+                "interpretability", "robustness", "scalability", "real-time prediction",
+                "handling missing values", "handling outliers",
+                # 추가된 요구사항들
+                "low latency", "high throughput", "fault tolerance", "data privacy",
+                "model versioning", "reproducibility", "automated retraining",
+                "concept drift detection", "model monitoring", "resource optimization",
+                "audit trail", "regulatory compliance", "model transparency",
+                "minimal maintenance", "easy deployment", "graceful degradation"
+            ],
+
+            "metric": [
+                # 기존 메트릭들
+                "accuracy", "precision", "recall", "F1 score", "ROC-AUC",
+                "mean squared error", "R-squared", "MAE", "cross-validation score",
+                "confusion matrix",
+                # 추가된 메트릭들
+                "log loss", "KL divergence", "silhouette score", "adjusted rand index",
+                "normalized mutual information", "MAPE", "RMSE", "RMSLE",
+                "explained variance", "kendall tau", "spearman correlation",
+                "precision at k", "recall at k", "mean reciprocal rank",
+                "normalized discounted cumulative gain", "lift", "gain chart",
+                "calibration curve", "reliability diagram", "cumulative gains"
+            ],
+
+            # 새로 추가된 variation 카테고리들
+            "validation_type": [
+                "schema validation", "data quality rules", "statistical tests",
+                "business rules", "integrity constraints", "format checking",
+                "range validation", "cross-field validation", "referential integrity",
+                "uniqueness check", "completeness check", "consistency check"
+            ],
+
+            "visualization_type": [
+                "scatter plot", "line chart", "bar chart", "histogram",
+                "box plot", "violin plot", "heat map", "correlation matrix",
+                "pair plot", "facet grid", "time series plot", "density plot",
+                "contour plot", "tree map", "sankey diagram", "force directed graph",
+                "geographical map", "radar chart", "bubble chart", "area chart"
+            ],
+
+            "analysis_type": [
+                "univariate analysis", "bivariate analysis", "multivariate analysis",
+                "correlation analysis", "principal component analysis", "factor analysis",
+                "cluster analysis", "time series decomposition", "cohort analysis",
+                "funnel analysis", "path analysis", "survival analysis",
+                "sensitivity analysis", "what-if analysis", "root cause analysis"
+            ],
+
+            "integration_method": [
+                "merge", "join", "union", "intersection", "concatenation",
+                "incremental loading", "full refresh", "snapshot", "slowly changing dimension",
+                "change data capture", "streaming integration", "batch processing"
+            ]
+        }
+
+        self.context_templates = [
+            # 데이터 특성 관련 컨텍스트
+            "The dataset contains {size} records and {num_features} features.",
+            "The data is collected from {num_sources} different {source} covering {time_period}.",
+            "The dataset updates {update_frequency} with {update_size} new records.",
+            "The data structure follows {data_structure} format with {relationship_type} relationships.",
+            "Historical data spans {history_period} with {history_granularity} granularity.",
+            "The features include {feature_types} with {value_range} ranges.",
+            "The dataset contains {categorical_count} categorical and {numerical_count} numerical columns.",
+            "The time-series components show {temporal_characteristic} with {temporal_granularity}.",
+            "Feature correlations indicate {correlation_pattern} between {feature_groups}.",
+            "Data cardinality varies from {min_cardinality} to {max_cardinality} across features.",
+
+            # 데이터 품질 관련 컨텍스트
+            "Data quality analysis reveals {quality_issue} affecting {affected_percentage} of records.",
+            "Initial profiling shows {data_distribution} distribution with {statistical_property}.",
+            "Missing value patterns suggest {missing_pattern} in {feature_scope}.",
+            "Outlier detection identified {outlier_pattern} in {affected_features}.",
+            "Data validation found {validation_issue} between {related_features}.",
+            "Data consistency check shows {consistency_pattern} across {data_scope}.",
+            "Duplicate analysis revealed {duplication_pattern} in {record_scope}.",
+            "Data integrity check highlighted {integrity_issue} in {integrity_scope}.",
+            "Value distribution shows {distribution_anomaly} for {affected_columns}.",
+            "Time series validation detected {temporal_issue} in {time_scope}.",
+
+            # 목표 변수 관련 컨텍스트
+            "The target variable exhibits {target_distribution} with {class_balance}.",
+            "Target analysis shows {target_relationship} with {predictor_features}.",
+            "Historical target patterns indicate {historical_pattern} over {pattern_period}.",
+            "The target variable contains {target_quality_issue} that requires {handling_method}.",
+            "Label distribution presents {label_characteristic} across {label_scope}.",
+
+            # 데이터 스키마 및 구조 관련 컨텍스트
+            "The schema contains {schema_complexity} with {dependency_type} dependencies.",
+            "Feature hierarchy shows {hierarchy_pattern} in {feature_category}.",
+            "Data normalization level is {normalization_level} with {key_relationship}.",
+            "Schema validation reveals {schema_issue} requiring {schema_modification}."
+        ]
+
+        self.context_variations = {
+            # 기본 크기 및 수량 관련
+            "size": ["1,000", "10,000", "50,000", "100,000", "500,000", "1 million", "5 million", "10 million"],
+            "num_features": ["10", "20", "50", "100", "200", "500", "1000", "2000"],
+            "num_sources": ["2", "3", "5", "8", "10", "15", "20"],
+
+            # 데이터 구조 및 특성 관련
+            "data_structure": [
+                "relational tables", "nested JSON", "hierarchical XML", "key-value pairs",
+                "graph connections", "document store", "columnar format", "parquet files"
+            ],
+            "relationship_type": [
+                "one-to-one", "one-to-many", "many-to-many", "hierarchical",
+                "network", "recursive", "polymorphic", "composite"
+            ],
+            "feature_types": [
+                "mixed numeric-categorical", "primarily numerical", "mostly categorical",
+                "binary indicators", "continuous measures", "discrete counts",
+                "timestamp sequences", "text fields", "nested structures"
+            ],
+            "temporal_characteristic": [
+                "strong seasonality", "trend patterns", "cyclic behavior",
+                "irregular spikes", "gradual drift", "sudden shifts",
+                "multiple seasonality", "long-term trends"
+            ],
+            "correlation_pattern": [
+                "strong positive", "strong negative", "non-linear", "time-lagged",
+                "cluster-based", "hierarchical", "sparse", "dense"
+            ],
+
+            # 데이터 품질 관련
+            "quality_issue": [
+                "missing timestamps", "inconsistent categories", "value range violations",
+                "format inconsistencies", "reference integrity issues", "unit mismatches",
+                "precision loss", "truncation errors", "encoding problems", "versioning conflicts"
+            ],
+            "data_distribution": [
+                "highly skewed", "multi-modal", "heavy-tailed", "mixture distribution",
+                "zero-inflated", "bounded range", "discrete-continuous mix", "power law"
+            ],
+            "statistical_property": [
+                "high kurtosis", "extreme skewness", "heteroscedasticity",
+                "autocorrelation", "overdispersion", "zero-inflation",
+                "multicollinearity", "non-stationarity"
+            ],
+            "missing_pattern": [
+                "MCAR", "MAR", "MNAR", "systematic", "periodic",
+                "burst missing", "partial records", "complete record missing"
+            ],
+            "outlier_pattern": [
+                "global outliers", "contextual outliers", "collective outliers",
+                "seasonal outliers", "local outliers", "structural outliers"
+            ],
+            "validation_issue": [
+                "type mismatches", "range violations", "uniqueness violations",
+                "referential integrity", "format violations", "logical contradictions",
+                "temporal inconsistency", "spatial inconsistency"
+            ],
+
+            # 시간 관련
+            "time_period": ["last week", "past month", "past quarter", "past year", "past 2 years", "past 5 years"],
+            "update_frequency": ["real-time", "hourly", "daily", "weekly", "monthly", "quarterly"],
+            "history_granularity": ["per second", "per minute", "hourly", "daily", "weekly", "monthly"],
+            "temporal_granularity": ["millisecond", "second", "minute", "hour", "day", "week", "month"],
+
+            # 데이터 범위 및 카디널리티
+            "value_range": [
+                "highly variable", "strictly bounded", "natural numbers",
+                "percentage values", "logarithmic scale", "categorical levels"
+            ],
+            "categorical_count": ["5", "10", "20", "50", "100", "200"],
+            "numerical_count": ["10", "20", "50", "100", "200", "500"],
+            "min_cardinality": ["2", "5", "10", "20", "50", "100"],
+            "max_cardinality": ["100", "1000", "10000", "100000", "1000000"],
+
+            # 분포 및 패턴 관련
+            "distribution_anomaly": [
+                "unexpected peaks", "sudden drops", "gradual drift",
+                "seasonal changes", "regime shifts", "mixing distributions"
+            ],
+            "temporal_issue": [
+                "timestamp gaps", "overlapping periods", "future timestamps",
+                "invalid sequences", "causal violations", "temporal drift"
+            ],
+            "duplication_pattern": [
+                "exact duplicates", "near-duplicates", "logical duplicates",
+                "partial duplicates", "cross-source duplicates"
+            ]
+        }
+
+        self.context_variations.update({
+            "feature_scope": ["numeric columns", "categorical columns", "timestamp fields", "text data"],
+            "affected_features": ["primary features", "derived features", "target related features", "key features"],
+            "related_features": ["correlated features", "dependent features", "independent features"],
+            "data_scope": ["entire dataset", "specific partitions", "time ranges", "feature subsets"],
+            "record_scope": ["all records", "recent records", "historical records", "specific segments"],
+            "integrity_scope": ["primary keys", "foreign keys", "unique constraints", "check constraints"],
+            "affected_columns": ["key columns", "feature columns", "metadata columns", "calculated fields"],
+            "time_scope": ["recent data", "historical data", "specific periods", "full timeline"],
+            "target_distribution": ["normal", "skewed", "bimodal", "uniform"],
+            "class_balance": ["balanced", "slightly imbalanced", "highly imbalanced", "extremely rare events"],
+            "target_relationship": ["strong correlation", "weak correlation", "non-linear relationship",
+                                    "no clear pattern"],
+            "predictor_features": ["main features", "interaction terms", "derived features", "external factors"],
+            "historical_pattern": ["stable", "trending", "cyclical", "volatile"],
+            "pattern_period": ["short term", "medium term", "long term", "multiple periods"],
+            "target_quality_issue": ["missing labels", "noisy labels", "inconsistent labels", "delayed labels"],
+            "handling_method": ["imputation", "removal", "correction", "special handling"],
+            "label_characteristic": ["discrete classes", "continuous values", "hierarchical classes", "multi-label"],
+            "label_scope": ["all classes", "major classes", "minor classes", "specific segments"],
+            "schema_complexity": ["simple flat structure", "moderate complexity", "highly normalized",
+                                  "complex relationships"],
+            "dependency_type": ["functional dependencies", "partial dependencies", "transitive dependencies",
+                                "multi-valued dependencies"],
+            "hierarchy_pattern": ["flat", "nested", "recursive", "hybrid"],
+            "feature_category": ["primary features", "derived features", "composite features", "external features"],
+            "normalization_level": ["1NF", "2NF", "3NF", "BCNF"],
+            "key_relationship": ["primary-foreign key", "composite keys", "natural keys", "surrogate keys"],
+            "schema_issue": ["normalization problems", "denormalization needs", "key violations",
+                             "relationship conflicts"],
+            "schema_modification": ["restructuring", "denormalization", "key redesign", "relationship revision"],
+            "feature_groups": ["correlated features", "independent features", "derived features",
+                               "domain-specific features"],
+            "update_size": ["100", "1000", "10000", "100000"]  # 이미 있었지만 명시적으로 포함
+        })
+
+    def generate_dataset(self, size: int = 10000) -> List[Dict]:
+        dataset = []
+        generated_hashes = set()
+        retry_limit = 3
+
+        while len(dataset) < size:
+            retry_count = 0
+            while retry_count < retry_limit:
+                try:
+                    # 태스크 카테고리 선택
+                    category = random.choice(list(self.task_templates.keys()))
+                    template = random.choice(self.task_templates[category])
+
+                    # 변수 선택
+                    variables = {}
+                    for var_type in self.variations.keys():
+                        if "{" + var_type + "}" in template:
+                            variables[var_type] = random.choice(self.variations[var_type])
+
+                    # 컨텍스트 선택 로직 수정
+                    relevant_contexts = []
+                    for ctx in self.context_templates:
+                        required_vars = self._extract_variables(ctx)
+                        if all(var in self.context_variations for var in required_vars):
+                            relevant_contexts.append(ctx)
+
+                    if not relevant_contexts:  # 사용 가능한 컨텍스트가 없는 경우
+                        continue
+
+                    # 컨텍스트 수 결정 (최소 1개에서 최대 3개, 但 가용 컨텍스트 수 이하)
+                    n_contexts = min(3, len(relevant_contexts))
+                    n_contexts = random.randint(1, n_contexts)
+
+                    # 컨텍스트 선택
+                    contexts = random.sample(relevant_contexts, n_contexts)
+
+                    # 컨텍스트 변수 선택
+                    context_vars = {}
+                    valid_context = True
+
+                    for context in contexts:
+                        required_vars = self._extract_variables(context)
+                        for var in required_vars:
+                            if var not in context_vars and var in self.context_variations:
+                                context_vars[var] = random.choice(self.context_variations[var])
+                            elif var not in self.context_variations:
+                                valid_context = False
+                                break
+
+                        if not valid_context:
+                            break
+
+                    if not valid_context:
+                        retry_count += 1
+                        continue
+
+                    # 최종 프롬프트 생성
+                    prompt = template.format(**variables)
+                    for context in contexts:
+                        try:
+                            prompt += "\n" + context.format(**context_vars)
+                        except KeyError as e:
+                            print(f"Skipping context due to missing variable: {e}")
+                            continue
+
+                    # 중복 체크
+                    prompt_hash = hashlib.md5(prompt.encode()).hexdigest()
+                    if prompt_hash in generated_hashes:
+                        retry_count += 1
+                        continue
+
+                    # 데이터셋에 추가
+                    generated_hashes.add(prompt_hash)
+                    dataset.append({
+                        "prompt": prompt,
+                        "category": category,
+                        "difficulty": self._assess_difficulty(prompt),
+                        "context_count": len(contexts)
+                    })
+
+                    if len(dataset) % 100 == 0:
+                        print(f"Generated {len(dataset)} prompts")
+                    break
+
+                except Exception as e:
+                    print(f"Error generating prompt: {str(e)}")
+                    retry_count += 1
+
+            if retry_count == retry_limit:
+                print(f"Failed to generate unique prompt after {retry_limit} attempts")
+
+        return dataset
+
+    def _extract_variables(self, template: str) -> List[str]:
+        """템플릿에서 변수명 추출"""
+        return [var.split('}')[0] for var in template.split('{')[1:]]
+
+    def _assess_difficulty(self, prompt: str) -> str:
+        """개선된 난이도 평가 로직"""
+        complexity_score = 0
+
+        # 기본 복잡도 점수
+        complexity_score += len(prompt.split('\n')) * 1.5
+
+        # 태스크 복잡도
+        task_complexity = {
+            "data_loading": 1,
+            "data_validation": 2,
+            "data_cleaning": 2,
+            "preprocessing": 3,
+            "feature_engineering": 4,
+            "feature_selection": 3,
+            "data_transformation": 3,
+            "data_integration": 4,
+            "exploratory_analysis": 2,
+            "evaluation": 2,
+            "data_visualization": 2,
+            "data_pipeline": 5,
+            "error_handling": 3
+        }
+
+        for task, score in task_complexity.items():
+            if task in prompt.lower():
+                complexity_score += score
+
+        # 키워드 기반 복잡도
+        complex_keywords = {
+            "pipeline": 2,
+            "multiple": 1,
+            "distributed": 3,
+            "real-time": 2,
+            "optimization": 2,
+            "custom": 1,
+            "complex": 2,
+            "advanced": 2,
+            "integration": 2,
+            "automated": 1
+        }
+
+        for keyword, score in complex_keywords.items():
+            if keyword in prompt.lower():
+                complexity_score += score
+
+        # 요구사항 및 제약조건 수
+        complexity_score += prompt.count("and") * 0.5
+        complexity_score += prompt.count("while") * 1
+        complexity_score += prompt.count("ensuring") * 1
+
+        if complexity_score <= 6:
+            return "beginner"
+        elif complexity_score <= 12:
+            return "intermediate"
+        else:
+            return "advanced"
+
+
+def save_dataset(dataset: List[Dict], filepath: str):
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(dataset, f, indent=2)
+
+
+# 사용 예시
+if __name__ == "__main__":
+    # 생성기 초기화
+    generator = PromptGenerator()
+
+    # 데이터셋 생성
+    dataset = generator.generate_dataset(size=50000)
+    from loguru import logger
+    logger.info(f"{len(dataset)=}")
+    # 결과 저장
+    save_dataset(dataset, "ds_prompts.json")
+
+    # 기본 통계
+    categories = {}
+    difficulties = {}
+
+    for sample in dataset:
+        cat = sample["category"]
+        diff = sample["difficulty"]
+        categories[cat] = categories.get(cat, 0) + 1
+        difficulties[diff] = difficulties.get(diff, 0) + 1
+
+    print("\nCategory distribution:")
+    for cat, count in categories.items():
+        print(f"{cat}: {count} ({count / len(dataset) * 100:.2f}%)")
+
+    print("\nDifficulty distribution:")
+    for diff, count in difficulties.items():
+        print(f"{diff}: {count} ({count / len(dataset) * 100:.2f}%)")
+
+    # 샘플 프롬프트 출력
+    print("\nSample prompts:")
+    for i, sample in enumerate(random.sample(dataset, 3)):
+        print(f"\nSample {i + 1}:")
+        print(f"Category: {sample['category']}")
+        print(f"Difficulty: {sample['difficulty']}")
+        print(f"Prompt: {sample['prompt']}")
