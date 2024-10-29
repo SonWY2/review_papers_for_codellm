@@ -1,0 +1,990 @@
+import json
+import random
+from datetime import datetime
+from typing import List, Dict, Any
+
+
+class DataStructureGenerator:
+    def __init__(self):
+        self.array_shapes = {
+            "1D": [
+                "(n,)", "(100,)", "(1000,)", "(n_samples,)",
+                "(time_steps,)", "(features,)", "(observations,)",
+                "(sequence_length,)" # 시퀀스 데이터 추가
+            ],
+            "2D": [
+                "(n, m)", "(100, 50)", "(1000, 10)",
+                "(n_samples, n_features)", "(rows, columns)",
+                "(observations, variables)", "(time_steps, features)",
+                "(batch_size, sequence_length)" # 배치 - 시퀀스 구성
+            ],
+            "3D": [
+                      "(n, m, k)", "(batch_size, height, width)",
+                      "(samples, time_steps, features)",
+                      "(groups, observations, variables)",
+                      "(batch_size, sequence_length, features)", # 배치 - 시퀀스 - 특징 구성
+                    "(channels, height, width)" # 이미지 처리에 자주 쓰이는 구성
+            ],
+            "4D": [
+                  "(batch_size, channels, height, width)",
+                  "(samples, time_steps, groups, features)",
+                  "(batch_size, sequence_length, channels, features)",
+            ],
+        }
+
+        self.data_types = {
+            "numeric": ["int32", "int64", "float32", "float64", "complex64", "complex128"],     # 복소수 타입 추가
+            "temporal": ["datetime64[ns]", "timedelta64[ns]", "period", "date"],                # 기간(period)과 단순 날짜(date) 타입 추가
+            "categorical": ["category", "string", "bool", "ordered-category"],                  # 순서가 있는 카테고리형 데이터 추가
+            "structured": ["object", "mixed-integer", "mixed-float", "mixed-integer-float"],    # 혼합형 구조의 다양한 조합 포함
+            "special": ["sparse", "dense", "masked", "nullable"]
+        }
+
+        self.distributions = [
+            "normal",
+            "uniform",
+            "exponential",
+            "poisson",
+            "binomial",
+            "log-normal",
+            "power-law",
+            "student-t",
+            "chi-squared"
+        ]
+
+        self.common_variables = [
+            "X", "y", "data", "df", "array", "matrix",
+            "features", "targets", "time_series", "samples",
+            "observations", "measurements", "values"
+        ]
+
+        self.special_characteristics = [
+            "missing values",
+            "outliers",
+            "duplicates",
+            "imbalanced classes",
+            "skewed distribution",
+            "multicollinearity",
+            "seasonality",
+            "trend",
+            "heteroscedasticity",
+            "autocorrelation",              # 시계열 또는 순차 데이터에서의 자기상관성
+            "non-linear relationships",     # 변수 간 비선형 관계
+            "high cardinality",             # 고유한 카테고리가 많을 때
+            "categorical encoding issues",  # 잘못된 카테고리 인코딩
+            "noise",                        # 노이즈가 많은 데이터
+            "missing patterns",             # 특정 패턴을 따르는 결측치
+            "stationarity",                 # 시계열 데이터의 정상성 여부
+            "class overlap",                # 클래스 간 경계가 불명확한 경우
+            "interaction effects",          # 변수 간 상호작용 효과
+            "response imbalance",           # 타겟 클래스의 불균형과 별개로 타겟이 특정 값으로 편중된 경우
+            "sampling bias",                # 데이터가 특정 조건에 치우친 표본으로 구성된 경우
+        ]
+
+    def generate_structure(self) -> Dict[str, str]:
+        # 차원 및 형태 선택
+        dims = random.choice(list(self.array_shapes.keys()))
+        shape = random.choice(self.array_shapes[dims])
+
+        # 데이터 타입 선택
+        type_category = random.choice(list(self.data_types.keys()))
+        dtype = random.choice(self.data_types[type_category])
+
+        # 변수명 선택
+        var_name = random.choice(self.common_variables)
+
+        # 분포 선택
+        distribution = random.choice(self.distributions)
+
+        # 특수 특성 선택 (2-3개)
+        special_chars = random.sample(
+            self.special_characteristics,
+            k=random.randint(2, 3)
+        )
+
+        return {
+            "dimension": dims,
+            "shape": shape,
+            "dtype": dtype,
+            "variable": var_name,
+            "distribution": distribution,
+            "special_characteristics": special_chars
+        }
+
+
+class APIOperationGenerator:
+    def __init__(self):
+        self.operations = {
+            "numpy": {
+                "array_manipulation": [
+                    "reshape the array to analyze time series patterns",
+                    "transpose dimensions for feature analysis",
+                    "combine multiple data arrays",
+                    "split data into training and validation sets",
+                    "merge features from different sources",
+                    "reshape data for statistical analysis",
+                    "expand dimensions for broadcasting",
+                    "flatten multi-dimensional arrays for simpler processing",
+                    "concatenate arrays along a new axis",
+                    "stack arrays vertically and horizontally",
+                    "repeat and tile data patterns",
+                    "split arrays based on custom indices"
+                ],
+                "computation": [
+                    "calculate mean values across groups",
+                    "find maximum and minimum values in each category",
+                    "compute cumulative statistics over time",
+                    "calculate correlation between variables",
+                    "perform element-wise statistical operations",
+                    "compute rolling statistics",
+                    "calculate exponential and logarithmic values",
+                    "generate random samples for simulations",
+                    "compute dot products for vector operations",
+                    "calculate statistical moments (variance, skewness, kurtosis)",
+                    "perform linear algebra operations (matrix multiplication, inverse)",
+                    "calculate distances between points in space"
+                ],
+                "indexing": [
+                    "filter data based on conditions",
+                    "select specific samples and features",
+                    "extract data subsets for analysis",
+                    "mask invalid or missing values",
+                    "select data within specific ranges",
+                    "retrieve unique elements from arrays",
+                    "index arrays with boolean masks",
+                    "use fancy indexing for custom selections",
+                    "slice arrays along specific dimensions",
+                    "retrieve elements using integer indexing",
+                    "select random elements based on conditions"
+                ],
+                "random": [
+                    "generate random numbers within a range",
+                    "create random samples for bootstrapping",
+                    "generate random integers for indexing",
+                    "shuffle data arrays for randomization",
+                    "sample with and without replacement",
+                    "generate random values from normal distribution",
+                    "generate random values from uniform distribution"
+                ],
+                "linear_algebra": [
+                    "perform matrix multiplication and dot products",
+                    "compute matrix inverse and transpose",
+                    "solve systems of linear equations",
+                    "compute eigenvalues and eigenvectors",
+                    "apply singular value decomposition",
+                    "perform QR and Cholesky decompositions",
+                    "calculate matrix determinants",
+                    "evaluate norms and inner products"
+                ],
+                "transformations": [
+                    "apply Fourier transforms",
+                    "compute discrete cosine transforms",
+                    "apply wavelet transformations",
+                    "perform z-score standardization",
+                    "normalize data for analysis",
+                    "apply data scaling and centering"
+                ],
+            },
+            "pandas": {
+                "groupby": [
+                    "group data by multiple categories",
+                    "calculate group-level statistics",
+                    "apply aggregation functions to groups",
+                    "analyze patterns within groups",
+                    "filter groups based on statistics",
+                    "compute rolling statistics by group",
+                    "find top N items in each group",
+                    "calculate percentage within groups"
+                ],
+                "merge": [
+                    "combine data from multiple sources",
+                    "join datasets on common keys",
+                    "merge time series data",
+                    "combine features from different tables",
+                    "merge hierarchical data structures",
+                    "merge with specific join conditions",
+                    "combine while handling duplicates",
+                    "merge with date range overlaps"
+                ],
+                "reshape": [
+                    "convert data to time series format",
+                    "transform wide data to long format",
+                    "create pivot tables for analysis",
+                    "restructure hierarchical data",
+                    "prepare data for statistical testing",
+                    "melt multiple columns with identifiers",
+                    "pivot with custom aggregation functions",
+                    "reshape panel data for analysis"
+                ],
+                "analysis": [
+                    "analyze temporal patterns",
+                    "identify trends and seasonality",
+                    "detect outliers and anomalies",
+                    "compute summary statistics",
+                    "analyze distributions",
+                    "calculate rolling averages",
+                    "find correlation between columns",
+                    "analyze percentage changes"
+                ],
+                "filtering": [
+                    "filter rows based on conditions",
+                    "select specific columns by pattern",
+                    "remove duplicate entries",
+                    "filter based on multiple criteria",
+                    "remove rows with missing values",
+                    "filter using date ranges",
+                    "select top/bottom percentile",
+                    "filter based on string patterns"
+                ],
+                "string_operations": [
+                    "extract patterns from text columns",
+                    "clean and standardize text data",
+                    "split text into multiple columns",
+                    "replace values using regex",
+                    "concatenate multiple text columns",
+                    "extract numbers from text",
+                    "standardize case and format",
+                    "handle special characters"
+                ],
+                "datetime_operations": [
+                    "convert columns to datetime",
+                    "extract date components",
+                    "resample time series data",
+                    "calculate time differences",
+                    "handle different time zones",
+                    "create date ranges",
+                    "find business days",
+                    "group by time periods"
+                ],
+                "cleaning": [
+                    "handle missing values",
+                    "remove outliers",
+                    "fix data type issues",
+                    "standardize column names",
+                    "handle duplicate entries",
+                    "clean string values",
+                    "fix inconsistent formatting",
+                    "validate data integrity"
+                ],
+                "calculation": [
+                    "create new columns with calculations",
+                    "apply custom functions to columns",
+                    "calculate running totals",
+                    "compute percentage changes",
+                    "perform conditional calculations",
+                    "calculate row-wise statistics",
+                    "apply mathematical operations",
+                    "create categorical bins"
+                ],
+                "type_handling": [
+                    "Show the data types before and after the conversion.",
+                    "Check for any data loss during conversion.",
+                    "Verify the conversion was successful.",
+                    "Include error handling for failed conversions."
+                ],
+                "indexing": [
+                    "Demonstrate both successful and failed cases.",
+                    "Show the difference between methods.",
+                    "Include common pitfalls to avoid.",
+                    "Verify the results are as expected."
+                ],
+                "selection": [
+                    "Check the resulting column types.",
+                    "Verify all desired columns are included.",
+                    "Show the shape before and after.",
+                    "Confirm selection criteria is correct."
+                ],
+                "casting": [
+                    "Check for data loss during conversion.",
+                    "Show handling of edge cases.",
+                    "Include error handling strategies.",
+                    "Verify data integrity after conversion."
+                ],
+                "copy_view": [
+                    "Verify independence of the copy.",
+                    "Show memory addresses of original and copy.",
+                    "Demonstrate proper modification techniques.",
+                    "Include common warning resolution strategies."
+                ],
+            },
+            "sklearn": {
+                "preprocessing": [
+                    "normalize features for analysis",
+                    "encode categorical variables",
+                    "handle missing data points",
+                    "transform variable distributions",
+                    "scale features for comparison",
+                    "binarize target labels",
+                    "generate polynomial features for analysis",
+                    "apply feature selection techniques"
+                ],
+                "analysis": [
+                    "perform dimension reduction",
+                    "cluster similar data points",
+                    "identify important features",
+                    "detect patterns and relationships",
+                    "analyze feature importance",
+                    "apply correlation analysis",
+                    "detect multicollinearity among variables",
+                    "assess class balance"
+                ],
+                "evaluation": [
+                    "validate analysis results",
+                    "assess statistical significance",
+                    "compare different methods",
+                    "evaluate prediction accuracy",
+                    "analyze model performance",
+                    "compute cross-validation scores",
+                    "apply confusion matrix analysis",
+                    "calculate precision, recall, and F1 score"
+                ],
+                "model_selection": [
+                    "perform train-test split",
+                    "use cross-validation for model evaluation",
+                    "apply grid search for hyperparameter tuning",
+                    "compare multiple model performances",
+                    "assess overfitting and underfitting",
+                    "choose best model based on metrics"
+                ],
+                "feature_engineering": [
+                    "create interaction terms between features",
+                    "extract date-based features from timestamps",
+                    "generate lagged features for time series",
+                    "engineer new variables based on domain knowledge",
+                    "apply one-hot encoding for categorical features"
+                ],
+                "ensemble_methods": [
+                    "implement bagging techniques for stability",
+                    "apply boosting methods for accuracy",
+                    "combine predictions from multiple models",
+                    "evaluate feature importance in ensemble models",
+                    "use random forest for robust predictions",
+                    "apply stacking and blending for model fusion"
+                ],
+                "pipeline": [
+                    "build preprocessing and modeling pipeline",
+                    "automate feature scaling and transformation",
+                    "streamline model training and evaluation",
+                    "chain multiple data transformations",
+                    "integrate custom transformers into pipeline",
+                    "apply cross-validation within pipeline"
+                ],
+                "metrics": [
+                    "calculate mean squared error for regression",
+                    "assess accuracy for classification",
+                    "evaluate area under ROC curve",
+                    "measure R-squared for model fit",
+                    "compute log loss for probabilistic models",
+                    "evaluate Matthews correlation coefficient",
+                    "assess model robustness with custom metrics"
+                ]
+            }
+        }
+
+        # 복잡도별 분석 요구사항 정의
+        self.analysis_requirements = {
+            "basic": [
+                "check data types and formats",
+                "handle basic missing values",
+                "validate input data",
+                "provide summary statistics",
+                "create basic visualizations",
+                "validate categorical and numeric splits",
+                "verify column consistency",
+                "confirm non-null primary key values"
+            ],
+            "intermediate": [
+                "handle missing and invalid data",
+                "check data quality",
+                "validate analysis assumptions",
+                "provide detailed statistics",
+                "visualize relationships",
+                "analyze distributions",
+                "detect basic anomalies",
+                "perform basic transformation checks",
+                "validate data ranges for key metrics"
+            ],
+            "advanced": [
+                "perform comprehensive data validation",
+                "handle complex missing patterns",
+                "check statistical assumptions",
+                "provide confidence intervals",
+                "analyze statistical significance",
+                "create advanced visualizations",
+                "validate results",
+                "ensure consistency of aggregated values",
+                "analyze feature interaction effects",
+                "check for data transformation artifacts",
+                "compare against baseline or control data"
+            ],
+            "expert": [
+                "ensure statistical validity",
+                "handle all edge cases",
+                "validate methodology",
+                "provide uncertainty estimates",
+                "analyze result robustness",
+                "create publication-quality visualizations",
+                "perform sensitivity analysis",
+                "assess model interpretability for complex data",
+                "validate generalizability of results",
+                "perform external validation with new data",
+                "confirm absence of bias in results",
+                "analyze potential confounding variables",
+                "apply advanced anomaly detection methods"
+            ]
+        }
+
+        # 복잡도별 작업 패턴
+        self.complexity_patterns = {
+            "basic": {
+                "libraries": ["pandas", "numpy"],
+                "categories": {
+                    "pandas": [
+                        "filtering",
+                        "selection",
+                        "cleaning",
+                        "indexing"
+                    ],
+                    "numpy": [
+                        "array_manipulation",    # 기본 배열 변환
+                        "indexing",              # 기본 인덱싱
+                        "random"                 # 단순한 랜덤 값 생성
+                    ]
+                },
+                "max_operations": 1
+            },
+            "intermediate": {
+                "libraries": ["pandas", "numpy", "sklearn"],
+                "categories": {
+                    "pandas": [
+                        "groupby",
+                        "merge",
+                        "reshape",
+                        "calculation",
+                        "string_operations",
+                        "datetime_operations",
+                        "type_handling",
+                        "casting"
+                    ],
+                    "numpy": [
+                        "array_manipulation",    # 배열 변환
+                        "computation",           # 기본 계산 작업
+                        "indexing",              # 다양한 인덱싱 기법
+                        "random",                # 난수 생성
+                        "linear_algebra"         # 단순 행렬 연산
+                    ],
+                    "sklearn": [
+                        "preprocessing",         # 데이터 전처리
+                        "analysis",              # 기본 분석
+                        "evaluation"             # 성능 평가
+                    ]
+                },
+                "max_operations": 2
+            },
+            "advanced": {
+                "libraries": ["pandas", "numpy", "sklearn"],
+                "categories": {
+                    "pandas": [
+                        "groupby",
+                        "merge",
+                        "reshape",
+                        "analysis",
+                        "string_operations",
+                        "datetime_operations",
+                        "cleaning",
+                        "calculation",
+                        "type_handling",
+                        "copy_view"
+                    ],
+                    "numpy": [
+                        "array_manipulation",    # 고급 배열 변환
+                        "computation",           # 복잡한 계산
+                        "indexing",              # 고급 인덱싱
+                        "random",                # 고급 난수 작업
+                        "linear_algebra",        # 고급 행렬 연산
+                        "transformations"        # 데이터 변환 작업
+                    ],
+                    "sklearn": [
+                        "preprocessing",         # 복잡한 전처리 작업
+                        "analysis",              # 심화 분석
+                        "evaluation",            # 고급 성능 평가
+                        "model_selection",       # 모델 선택 및 교차 검증
+                        "feature_engineering"     # 피처 엔지니어링
+                    ]
+                },
+                "max_operations": 3
+            },
+            "expert": {
+                "libraries": ["pandas", "numpy", "sklearn"],
+                "categories": {
+                    "pandas": [
+                        "groupby",
+                        "merge",
+                        "reshape",
+                        "analysis",
+                        "filtering",
+                        "string_operations",
+                        "datetime_operations",
+                        "cleaning",
+                        "calculation",
+                        "type_handling",
+                        "indexing",
+                        "selection",
+                        "casting",
+                        "copy_view"
+                    ],
+                    "numpy": [
+                        "array_manipulation",    # 고차원 배열 조작
+                        "computation",           # 심화 계산 작업
+                        "indexing",              # 고차원 인덱싱
+                        "random",                # 복잡한 난수 생성
+                        "linear_algebra",        # 복잡한 행렬 연산
+                        "transformations"        # 고급 데이터 변환
+                    ],
+                    "sklearn": [
+                        "preprocessing",         # 최적화된 전처리 작업
+                        "analysis",              # 고급 패턴 탐지
+                        "evaluation",            # 종합적인 평가
+                        "model_selection",       # 최적의 모델 선택
+                        "feature_engineering",    # 고급 피처 엔지니어링
+                        "ensemble_methods",       # 앙상블 기법 적용
+                        "pipeline",              # 복잡한 파이프라인 설계
+                        "metrics"                # 맞춤형 성능 지표 평가
+                    ]
+                },
+                "max_operations": 4
+            }
+        }
+
+    def generate_operation(self, complexity: str) -> Dict[str, Any]:
+        """복잡도 수준에 따라 데이터 분석 작업 생성"""
+        pattern = self.complexity_patterns[complexity]
+
+        # 라이브러리 선택
+        library = random.choice(pattern["libraries"])
+
+        # 작업 수 결정
+        n_operations = random.randint(1, pattern["max_operations"])
+
+        # 작업 선택
+        operations = []
+        allowed_categories = pattern["categories"][library]
+
+        for _ in range(n_operations):
+            category = random.choice(allowed_categories)
+            operation = random.choice(self.operations[library][category])
+            operations.append({
+                "category": category,
+                "operation": operation
+            })
+
+        # 분석 요구사항 선택
+        conditions = random.sample(
+            self.analysis_requirements[complexity],
+            k=min(3, len(self.analysis_requirements[complexity]))
+        )
+
+        # 성능 요구사항은 복잡도에 따라 다르게 설정
+        if complexity in ["expert"]:
+            performance = ["optimize for speed", "minimize memory usage"]
+        else:
+            performance = []
+
+        return {
+            "library": library,
+            "operations": operations,
+            "conditions": conditions,
+            "performance": performance
+        }
+
+
+class ProblemTemplateGenerator:
+    def __init__(self):
+        self.templates = {
+            "basic": [
+                # 기본적인 데이터 처리/분석
+                "How can I {operation} from this {structure}?",
+                "Can you help me {operation} in this {structure}?",
+                "I need to {operation} using this {structure}, how should I do it?",
+                "Write code to {operation} from the given {structure}",
+                "Show me how to {operation} for this {structure}",
+                "Explain how to {operation} from this {structure} step-by-step",
+                "Provide a simple way to {operation} using this {structure}"
+            ],
+            "intermediate": [
+                # 조건부 데이터 처리/분석
+                "I want to {operation} for {structure}, but only when {conditions}",
+                "Can you {operation} from {structure} while handling {conditions}?",
+                "How do I {operation} in {structure} considering {conditions}?",
+                "Write code to {operation} from {structure} that accounts for {conditions}",
+                "I need to {operation} in this {structure}, making sure to handle {conditions}",
+                "How can I {operation} for {structure} under specific {conditions}?",
+                "Show me how to {operation} in {structure} by accounting for {conditions}"
+            ],
+            "advanced": [
+                # 복합적인 데이터 처리/분석
+                "I need to first {operation} and then analyze the results in this {structure}",
+                "Can you help me {operation} and visualize the results from this {structure}?",
+                "I want to {operation} from {structure} and then apply statistical tests",
+                "How can I {operation} in {structure} and create meaningful visualizations?",
+                "Write code to {operation} and perform statistical analysis on {structure}",
+                "I’d like to {operation} and interpret results for this {structure} in-depth",
+                "Show me how to {operation} and evaluate trends in this {structure}"
+            ],
+            "expert": [
+                # 고급 데이터 분석/통계
+                "I need to perform {operation} on {structure} and validate the results using statistical methods",
+                "Can you help me {operation} from {structure} and analyze the significance of the results?",
+                "I want to {operation} in {structure} and then perform hypothesis testing",
+                "How can I {operation} and determine statistical significance in this {structure}?",
+                "Write code to {operation} and provide comprehensive statistical analysis for {structure}"
+            ]
+        }
+
+        self.analysis_context = {
+            "basic": [
+                "Also show the first few rows of the result.",
+                "Include basic summary statistics if applicable.",
+                "Can you also create a simple visualization?",
+                "Please include comments explaining the steps.",
+                "Check for any obvious inconsistencies in the data.",
+                "Provide a count of unique values in key columns.",
+                "Create a basic line or bar chart if suitable.",
+                "Explain any assumptions made in the analysis."
+            ],
+            "intermediate": [
+                "Also check for missing or invalid values in the results.",
+                "Include relevant descriptive statistics.",
+                "Add appropriate data validation steps.",
+                "Can you visualize the results in multiple ways?",
+                "Provide insights into categorical distributions.",
+                "Verify consistency across key variable groups."
+            ],
+            "advanced": [
+                "Include statistical tests to validate the results.",
+                "Add comprehensive data quality checks.",
+                "Provide multiple visualization perspectives.",
+                "Include correlation analysis if applicable.",
+                "Account for seasonality or trends if present.",
+                "Perform transformations if needed for normality."
+            ],
+            "expert": [
+                "Include confidence intervals and significance tests.",
+                "Provide detailed statistical analysis of the results.",
+                "Add multiple hypothesis tests where appropriate.",
+                "Include advanced visualization techniques.",
+                "Provide in-depth interpretation of statistical metrics.",
+                "Identify potential confounding variables in analysis.",
+                "Explain any limitations or biases in the dataset.",
+                "Check robustness of results against alternative methods."
+            ]
+        }
+
+        self.common_data_tasks = {
+            "basic": {
+                "filtering": "filter the data",
+                "grouping": "group the data",
+                "sorting": "sort the data",
+                "counting": "count occurrences",
+                "basic_stats": "calculate basic statistics"
+            },
+            "intermediate": {
+                "aggregation": "aggregate the data",
+                "transformation": "transform the variables",
+                "cleaning": "clean the data",
+                "reshaping": "reshape the data",
+                "merging": "merge multiple datasets"
+            },
+            "advanced": {
+                "time_series": "analyze time series patterns",
+                "correlation": "analyze correlations",
+                "dimension_reduction": "reduce dimensions",
+                "clustering": "perform clustering",
+                "feature_engineering": "engineer new features"
+            },
+            "expert": {
+                "statistical_modeling": "build statistical models",
+                "hypothesis_testing": "test hypotheses",
+                "anomaly_detection": "detect anomalies",
+                "forecasting": "create forecasts",
+                "causal_analysis": "analyze causal relationships"
+            }
+        }
+
+    def generate_template(self, complexity: str) -> str:
+        # Select base template and task type
+        template = random.choice(self.templates[complexity])
+        task_category = random.choice(list(self.common_data_tasks[complexity].keys()))
+        task = self.common_data_tasks[complexity][task_category]
+
+        # Add analysis context
+        context = random.choice(self.analysis_context[complexity])
+
+        # Return combined template with specific task
+        template = template.replace("{operation}", task)
+        return f"{template}\n\n{context}"
+
+    def format_template(self, template: str, operation: str, structure: str,
+                        conditions: str = "", performance: str = "") -> str:
+        """Format template with provided values"""
+        return template.format(
+            operation=operation,
+            structure=structure,
+            conditions=conditions,
+            performance=performance
+        )
+
+class ProblemGenerator:
+    def __init__(self):
+        self.structure_gen = DataStructureGenerator()
+        self.operation_gen = APIOperationGenerator()
+        self.template_gen = ProblemTemplateGenerator()
+
+        self.complexities = ["basic", "intermediate", "advanced", "expert"]
+        self.complexity_weights = [0.2, 0.4, 0.3, 0.1]  # Weighted distribution
+
+
+    def generate_problem(self) -> Dict[str, Any]:
+        # Select complexity level
+        complexity = random.choices(self.complexities, weights=self.complexity_weights)[0]
+
+        # Generate components
+        structure = self.structure_gen.generate_structure()
+        operation = self.operation_gen.generate_operation(complexity)
+        template = self.template_gen.generate_template(complexity)
+
+        # Format problem statement
+        structure_desc = (f"{structure['dimension']} array of shape {structure['shape']} "
+                        f"with {structure['dtype']} dtype, following {structure['distribution']} distribution")
+
+        operations_desc = " and ".join([op["operation"] for op in operation["operations"]])
+        conditions_desc = ", ".join(operation["conditions"])
+        performance_desc = ", ".join(operation["performance"])
+
+        problem_statement = template.format(
+            operation=operations_desc,
+            structure=structure_desc,
+            conditions=conditions_desc,
+            performance=performance_desc
+        )
+
+        return {
+            "problem_statement": problem_statement,
+            "complexity": complexity,
+            "structure": structure,
+            "operations": operation,
+            "special_characteristics": structure["special_characteristics"],
+            "requirements": {
+                "conditions": operation["conditions"],
+                "performance": operation["performance"]
+            }
+        }
+
+    # ProblemFormatter 클래스에서 complexity 확인 로직 추가
+    def to_prompt(self, problem: Dict) -> str:
+        # Ensure complexity exists in problem dictionary
+        if 'complexity' not in problem:
+            raise ValueError("Problem dictionary must contain 'complexity' key")
+
+        # Get appropriate template
+        template = self.prompt_templates[problem['complexity']]
+
+        # Format components
+        # structure_desc = self.format_structure_description(problem['structure'])
+        # requirements = self.format_requirements(problem['requirements'])
+        structure_desc = problem.get("structure_desc", self.format_structure_description(problem["structure"]))
+        requirements = problem.get("requirements", self.format_requirements(problem["requirements"]))
+        tech_considerations = self.format_tech_considerations(problem['operations'])
+        performance_reqs = self.format_performance_reqs(problem['requirements'])
+
+        # Create prompt
+        prompt = template.format(
+            problem_statement=problem['problem_statement'],
+            structure_desc=structure_desc,
+            dtype=problem['structure']['dtype'],
+            distribution=problem['structure']['distribution'],
+            special_chars=", ".join(problem['special_characteristics']),
+            requirements=requirements,
+            tech_considerations=tech_considerations,
+            performance_reqs=performance_reqs,
+            constraints="\n".join([f"- {c}" for c in problem['requirements']['conditions']])
+        )
+
+        return prompt
+
+
+class DatasetGenerator:
+    def __init__(self):
+        self.generator = ProblemGenerator()
+
+    def generate_dataset(self, n_problems: int) -> List[Dict[str, Any]]:
+        problems = []
+        for _ in range(n_problems):
+            problem = self.generator.generate_problem()
+            problems.append(problem)
+        return problems
+
+    def save_dataset(self, problems: List[Dict[str, Any]], filename: str):
+        with open(filename, 'w') as f:
+            json.dump(problems, f, indent=2)
+
+
+class ProblemFormatter:
+    def __init__(self):
+        self.prompt_templates = {
+            "basic": """Problem: {problem_statement}
+
+Input Details:
+- Data Structure: {structure_desc}
+- Special Characteristics: {special_chars}
+
+Requirements:
+{requirements}
+
+Note: Keep the implementation simple and focused on correctness.""",
+
+            "intermediate": """Problem: {problem_statement}
+
+Input Specifications:
+- Data Structure: {structure_desc}
+- Data Type: {dtype}
+- Distribution: {distribution}
+- Special Characteristics: {special_chars}
+
+Requirements:
+{requirements}
+
+Technical Considerations:
+{tech_considerations}""",
+
+            "advanced": """Problem: {problem_statement}
+
+Detailed Specifications:
+- Data Structure: {structure_desc}
+- Data Type: {dtype}
+- Distribution: {distribution}
+- Special Characteristics: {special_chars}
+
+Requirements:
+{requirements}
+
+Technical Considerations:
+{tech_considerations}
+
+Performance Requirements:
+{performance_reqs}""",
+
+            "expert": """Problem: {problem_statement}
+
+Detailed Specifications:
+- Data Structure: {structure_desc}
+- Data Type: {dtype}
+- Distribution: {distribution}
+- Special Characteristics: {special_chars}
+
+Requirements:
+{requirements}
+
+Technical Considerations:
+{tech_considerations}
+
+Performance Requirements:
+{performance_reqs}
+
+Additional Constraints:
+{constraints}"""
+        }
+
+    def format_structure_description(self, structure: Dict) -> str:
+        return (f"{structure['dimension']} array of shape {structure['shape']}")
+
+    def format_requirements(self, reqs: Dict) -> str:
+        return "\n".join([f"- {req}" for req in reqs['conditions']])
+
+    def format_tech_considerations(self, ops: Dict) -> str:
+        considerations = []
+        for op in ops['operations']:
+            considerations.append(f"- Implement {op['operation']} using {ops['library']}")
+        return "\n".join(considerations)
+
+    def format_performance_reqs(self, reqs: Dict) -> str:
+        return "\n".join([f"- {req}" for req in reqs['performance']])
+
+    # ProblemFormatter 클래스에서 complexity 확인 로직 추가
+    def to_prompt(self, problem: Dict) -> str:
+        # Ensure complexity exists in problem dictionary
+        if 'complexity' not in problem:
+            raise ValueError("Problem dictionary must contain 'complexity' key")
+
+        # Get appropriate template
+        template = self.prompt_templates[problem['complexity']]
+
+        # Format components
+        structure_desc = self.format_structure_description(problem['structure'])
+        requirements = self.format_requirements(problem['requirements'])
+        tech_considerations = self.format_tech_considerations(problem['operations'])
+        performance_reqs = self.format_performance_reqs(problem['requirements'])
+
+        # Create prompt
+        prompt = template.format(
+            problem_statement=problem['problem_statement'],
+            structure_desc=structure_desc,
+            dtype=problem['structure']['dtype'],
+            distribution=problem['structure']['distribution'],
+            special_chars=", ".join(problem['special_characteristics']),
+            requirements=requirements,
+            tech_considerations=tech_considerations,
+            performance_reqs=performance_reqs,
+            constraints="\n".join([f"- {c}" for c in problem['requirements']['conditions']])
+        )
+
+        return prompt
+
+
+# DatasetGenerator 클래스는 제거하고 generate_dataset 함수만 사용
+def generate_dataset(n_problems: int, output_file: str):
+    generator = ProblemGenerator()
+    formatter = ProblemFormatter()
+    dataset = {
+        "metadata": {
+            "generated_at": datetime.now().isoformat(),
+            "number_of_problems": n_problems
+        },
+        "problems": []
+    }
+
+    for _ in range(n_problems):
+        try:
+            problem = generator.generate_problem()
+            prompt = formatter.to_prompt(problem)
+
+            dataset["problems"].append({
+                "json_format": problem,
+                "prompt_format": prompt
+            })
+        except Exception as e:
+            print(f"Error generating problem: {str(e)}")
+            continue
+
+    # Save to file
+    with open(output_file, 'w') as f:
+        json.dump(dataset, f, indent=2)
+
+    return dataset["problems"]
+
+def main():
+    # Generate 10000 problems
+    problems = generate_dataset(10000, "ds_problems_claude__3.json")
+
+    # Print sample problems in both formats
+    print(f"Generated {len(problems)} problems. Sample problems:")
+    for i in range(5):
+        print(f"\n{'=' * 80}\nProblem {i + 1}:")
+        print(f"\nJSON Format:")
+        print(json.dumps(problems[i]["json_format"], indent=2))
+        print(f"\nPrompt Format:")
+        print(problems[i]["prompt_format"])
+
+
+if __name__ == "__main__":
+    main()
