@@ -1,0 +1,239 @@
+import random
+
+from jsonlines import jsonlines
+
+
+class DSPromptGenerator:
+    def __init__(self):
+        self.api_patterns = {
+            "numpy": {
+                "array_ops": ["reshape", "transpose", "stack", "concatenate", "split", "expand_dims", "squeeze",
+                              "ravel", "flatten", "tile", "repeat", "flip", "roll", "hstack", "vstack", "column_stack"],
+                "math_ops": ["mean", "std", "sum", "min", "max", "argmax", "argmin", "prod", "cumsum", "cumprod",
+                             "sqrt", "power", "log", "exp"],
+                "indexing": ["boolean indexing", "fancy indexing", "slice indexing", "where", "take", "ix_",
+                             "diag_indices", "nonzero"],
+                "type_conversion": ["astype", "todense", "toarray", "tocsr", "tocsc", "tolist", "astype", "copy"],
+                "random_ops": ["random.rand", "random.randn", "random.randint", "random.choice", "random.shuffle",
+                               "random.permutation", "random.beta", "random.gamma"],
+                "linear_algebra": ["dot", "matmul", "svd", "eig", "inv", "det", "qr", "cholesky", "norm", "pinv",
+                                   "cross", "solve"]
+            },
+            "pandas": {
+                "groupby_ops": ["group", "agg", "transform", "apply", "filter", "ngroup", "size", "cumcount", "rank",
+                                "rolling_apply"],
+                "reshape_ops": ["pivot", "melt", "stack", "unstack", "wide_to_long", "pivot_table", "transpose"],
+                "merge_ops": ["merge", "join", "concat", "append", "combine_first", "merge_asof", "merge_ordered",
+                              "update"],
+                "window_ops": ["rolling", "expanding", "ewm", "aggregate", "pipe", "shift", "diff", "pct_change"],
+                "date_ops": ["to_datetime", "date_range", "resample", "dt accessor", "to_period", "to_timedelta",
+                             "timestamp"],
+                "string_ops": ["str.split", "str.contains", "str.replace", "str.extract", "str.cat", "str.match",
+                               "str.find", "str.lower", "str.upper", "str.slice"]
+            },
+            "sklearn": {
+                "preprocessing": ["StandardScaler", "MinMaxScaler", "LabelEncoder", "OneHotEncoder", "Normalizer",
+                                  "Binarizer", "PolynomialFeatures", "RobustScaler", "PowerTransformer",
+                                  "QuantileTransformer"],
+                "model_ops": ["fit", "predict", "transform", "fit_transform", "score", "partial_fit",
+                              "decision_function", "predict_proba"],
+                "pipeline_ops": ["Pipeline", "FeatureUnion", "make_pipeline", "make_union", "cross_val_predict",
+                                 "GridSearchCV", "RandomizedSearchCV", "cross_val_score"],
+                "metrics": ["accuracy_score", "precision_score", "recall_score", "f1_score", "roc_auc_score",
+                            "mean_squared_error", "confusion_matrix", "classification_report", "log_loss", "r2_score",
+                            "silhouette_score"]
+            },
+            "matplotlib": {
+                "plotting": ["plot", "scatter", "bar", "hist", "imshow", "pie", "stem", "errorbar", "boxplot",
+                             "violinplot", "hexbin", "quiver", "stackplot", "contour", "barbs"],
+                "customization": ["xlabel", "ylabel", "title", "legend", "grid", "xlim", "ylim", "xticks", "yticks",
+                                  "subplot", "tight_layout", "subplots_adjust", "axis", "text"],
+                "styles": ["style.use", "rcParams", "set_cmap", "set_facecolor", "set_alpha", "set_linewidth",
+                           "set_linestyle", "set_marker"]
+            },
+            "scipy": {
+                "stats": ["norm", "uniform", "t", "chi2", "describe", "f_oneway", "ttest_ind", "pearsonr", "spearmanr",
+                          "wilcoxon", "ttest_rel", "fisher_exact", "mannwhitneyu"],
+                "integrate": ["quad", "dblquad", "nquad", "odeint", "solve_ivp", "romberg", "trapz", "cumtrapz"],
+                "optimize": ["minimize", "curve_fit", "root", "fmin", "brute", "basinhopping", "least_squares",
+                             "differential_evolution", "anneal"],
+                "signal_processing": ["butter", "lfilter", "freqz", "find_peaks", "spectrogram", "welch", "csd",
+                                      "hilbert", "chirp"]
+            },
+            "tensorflow": {
+                "layers": ["Dense", "Conv2D", "Flatten", "MaxPooling2D", "Dropout", "LSTM", "GRU", "BatchNormalization",
+                           "Embedding", "Activation", "Input", "Add", "Concatenate"],
+                "model_ops": ["compile", "fit", "evaluate", "predict", "train_on_batch", "save", "load_model",
+                              "summary", "checkpoint", "callbacks"],
+                "tensor_ops": ["constant", "Variable", "matmul", "reduce_sum", "reshape", "expand_dims", "sigmoid",
+                               "softmax", "argmax", "argmin", "multiply", "add", "subtract", "divide"]
+            },
+            "pytorch": {
+                "nn_layers": ["Linear", "Conv2d", "ReLU", "MaxPool2d", "Dropout", "LSTM", "GRU", "BatchNorm2d",
+                              "Sequential", "ConvTranspose2d", "Embedding", "Sigmoid", "Tanh"],
+                "model_training": ["forward", "backward", "step", "zero_grad", "optimizer", "scheduler", "train",
+                                   "eval", "save", "load_state_dict"],
+                "tensor_ops": ["tensor", "reshape", "cat", "mean", "sum", "max", "min", "argmax", "argmin", "to",
+                               "clone", "expand", "unsqueeze", "permute", "stack"],
+                "cuda_ops": ["to('cuda')", "cuda()", "is_available", "empty_cache", "device", "set_device"]
+            }
+        }
+
+        self.data_structures = {
+            "array_types": ["1D array", "2D array", "3D array", "sparse matrix", "dense matrix", "masked array",
+                            "structured array", "record array", "ragged array", "view", "broadcast array", "ndarray",
+                            "coo_matrix"],
+            "pandas_types": ["Series", "DataFrame", "MultiIndex", "DatetimeIndex", "CategoricalIndex", "IntervalIndex",
+                             "PeriodIndex", "Timedelta", "SparseSeries", "SparseDataFrame"],
+            "special_types": ["categorical", "datetime", "timedelta", "string", "object", "boolean", "complex", "UUID",
+                              "mixed", "timestamp", "interval", "intervalarray"]
+        }
+
+        self.algorithm_patterns = {
+            "math_operations": {
+                "linear_algebra": ["matrix multiplication", "eigenvalues", "SVD", "inverse", "QR decomposition",
+                                   "Cholesky decomposition", "LU decomposition", "determinant calculation"],
+                "statistics": ["correlation", "covariance", "hypothesis testing", "distribution fitting",
+                               "Bayesian inference", "linear regression", "logistic regression"],
+                "optimization": ["gradient descent", "linear programming", "convex optimization",
+                                 "stochastic gradient descent", "genetic algorithms", "Simulated Annealing"]
+            },
+            "data_processing": {
+                "cleaning": ["missing values", "outliers", "duplicates", "type conversion", "data imputation",
+                             "null value handling", "data trimming"],
+                "feature_engineering": ["scaling", "encoding", "binning", "interactions", "feature selection",
+                                        "polynomial features", "feature extraction", "normalization"],
+                "dimensionality_reduction": ["PCA", "t-SNE", "UMAP", "feature selection", "LDA", "ICA", "Kernel PCA"]
+            }
+        }
+
+        self.context_templates = {
+            "api_usage": [
+                "Using {library} version {version}, implement a function that {task} while handling {specific_challenge}",
+                "Optimize the {operation} of a {structure_type} in {library} for better performance. Consider edge cases like {edge_case}",
+                "Given the following code: {code_sample}, rewrite it using {operation} of {library} for improved efficiency.",
+                "Develop a detailed example using {library} to {task} with {operation}, while ensuring that the implementation is robust against {specific_challenge} and performs efficiently. Include error handling and scalability considerations.",
+                "Write a Python script that uses {library} to {task} involving {operation}. Make sure to demonstrate handling of common pitfalls such as {specific_challenge} and optimize for performance. Include comments for clarity."
+            ],
+            "data_structure": [
+                "Given a {structure_type} with shape {shape}, transform it to {target_structure} while preserving key properties and ensuring computational efficiency.",
+                "Implement an efficient way to handle {operation} on {structure_type}, considering edge cases such as missing values or mixed data types.",
+                "Convert between {source_type} and {target_type} while preserving {property}, and document the potential pitfalls and performance trade-offs.",
+                "Given a complex {structure_type}, design an algorithm to transform it into {target_structure} while maintaining optimal memory usage and providing clear justifications for your choices. Ensure the solution can scale to large datasets.",
+                "Using {library}, create a utility function that converts {structure_type} to {target_structure} while maintaining its attributes such as {property}, and discuss performance optimization techniques."
+            ],
+            "algorithm": [
+                "Implement {algorithm_type} to solve {problem_description}, ensuring correctness and discussing time and space complexity trade-offs.",
+                "Optimize the following {operation_type} operation for {constraint}, and explain how the chosen method minimizes computational overhead.",
+                "Design a solution using {technique} to handle {edge_case}, and include a step-by-step breakdown of the approach along with any potential pitfalls and how they can be mitigated.",
+                "Implement an advanced version of {algorithm_type} to solve {problem_description}, considering both best-case and worst-case scenarios, and analyze how different input sizes could impact the performance and scalability of the solution.",
+                "Using {algorithm_type}, develop a robust solution that solves {problem_description} under constraints such as {constraint}. Discuss both time complexity and space optimization strategies."
+            ]
+        }
+
+    def generate_prompt(self, category, complexity):
+        """
+        Generate a prompt based on category and complexity
+        """
+        if category == "api_usage":
+            library = random.choice(list(self.api_patterns.keys()))
+            operation_type = random.choice(list(self.api_patterns[library].keys()))
+            operation = random.choice(self.api_patterns[library][operation_type])
+
+            if complexity == "advanced":
+                # Combine multiple operations
+                second_op = random.choice(self.api_patterns[library][operation_type])
+                context = f"chain {operation} with {second_op}"
+            else:
+                context = operation
+
+            return f"How to {context} in {library}?"
+
+        elif category == "data_structure":
+            structure = random.choice(self.data_structures["array_types"])
+            if complexity == "advanced":
+                # Add complex transformations
+                target = random.choice(self.data_structures["special_types"])
+                return f"Transform {structure} to {target} while handling edge cases"
+            return f"Convert {structure} to desired format"
+
+        elif category == "algorithm":
+            algorithm_type = random.choice(list(self.algorithm_patterns.keys()))
+            operation_type = random.choice(list(self.algorithm_patterns[algorithm_type].keys()))
+            operation = random.choice(self.algorithm_patterns[algorithm_type][operation_type])
+            if complexity == "advanced":
+                # Add advanced constraint
+                constraint = "with a time complexity constraint"
+                return f"Implement {operation} {constraint}"
+            return f"Implement {operation}"
+
+    def generate_test_cases(self, prompt):
+        """
+        Generate test cases for the prompt
+        """
+        # Generate test cases based on prompt context
+        if "numpy" in prompt:
+            return "Input: np.array([...]), Expected Output: np.array([...]) after applying the specified operation."
+        elif "pandas" in prompt:
+            return "Input: pandas DataFrame with sample data, Expected Output: DataFrame with transformations applied as per the prompt."
+        elif "sklearn" in prompt:
+            return "Input: Dataset and preprocessing details, Expected Output: Transformed dataset or model performance metrics."
+        elif "matplotlib" in prompt:
+            return "Input: Data for plotting, Expected Output: Visualization of the data with specified customizations."
+        elif "scipy" in prompt:
+            return "Input: Data or parameters for statistical function, Expected Output: Calculated result as per the specified operation."
+        elif "tensorflow" in prompt:
+            return "Input: Tensor data, Expected Output: Trained model or transformed tensor based on the prompt."
+        elif "pytorch" in prompt:
+            return "Input: PyTorch tensor, Expected Output: Result after applying the specified tensor operations."
+        else:
+            return "Input: ... Expected Output: ..."
+
+    def generate_solution_template(self, prompt):
+        """
+        Generate solution template
+        """
+        # Generate a basic solution template based on the prompt
+        if "numpy" in prompt:
+            return "import numpy as np\n\ndef solution(input_array):\n    # Apply the specified numpy operations\n    return ..."
+        elif "pandas" in prompt:
+            return "import pandas as pd\n\ndef solution(input_dataframe):\n    # Apply the specified pandas transformations\n    return ..."
+        elif "sklearn" in prompt:
+            return "from sklearn.preprocessing import StandardScaler\n\ndef solution(input_data):\n    # Apply the specified sklearn operations\n    return ..."
+        elif "matplotlib" in prompt:
+            return "import matplotlib.pyplot as plt\n\ndef solution(input_data):\n    # Plot the specified data\n    plt.plot(input_data)\n    plt.show()"
+        elif "scipy" in prompt:
+            return "from scipy import stats\n\ndef solution(input_data):\n    # Apply the specified scipy operations\n    return stats.describe(input_data)"
+        elif "tensorflow" in prompt:
+            return "import tensorflow as tf\n\ndef solution(input_tensor):\n    # Apply the specified tensorflow operations\n    return tf.reduce_sum(input_tensor)"
+        elif "pytorch" in prompt:
+            return "import torch\n\ndef solution(input_tensor):\n    # Apply the specified pytorch operations\n    return torch.sum(input_tensor)"
+        else:
+            return "def solution(input_data):\n    # Your code here\n    pass"
+
+    def generate_multiple_prompts(self, num_prompts):
+        """
+        Generate multiple prompts to create a large dataset of synthesized prompts
+        """
+        prompts = set()
+        categories = ["api_usage", "data_structure", "algorithm"]
+        complexities = ["basic", "advanced"]
+
+        while len(prompts) < num_prompts:
+            category = random.choice(categories)
+            complexity = random.choice(complexities)
+            prompt = self.generate_prompt(category, complexity)
+            prompts.add(prompt)  # Using a set to ensure uniqueness
+            if len(prompts) % 100 == 0:
+                from loguru import logger
+                logger.info(f"{len(prompts)} / {num_prompts}")
+
+        return list(prompts)
+
+
+# Example usage
+generator = DSPromptGenerator()
+all_prompts = generator.generate_multiple_prompts(3000)
+print(len(all_prompts))
+for prompt in all_prompts[:5]:  # Print first 5 prompts as a sample
+    print("Prompt:", prompt)
