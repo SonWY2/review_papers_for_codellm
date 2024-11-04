@@ -98,7 +98,8 @@ github: x
   - n=k인 경우 두 메트릭이 동일
 - 무조건 k를 늘리는 것은 계산적으로 최적이 아님.
 
-![image](https://github.com/user-attachments/assets/a6016347-f04e-4af5-be15-9c6251989b1c)
+![image](https://github.com/user-attachments/assets/f9083662-4600-4ecc-bab2-d8a0a0005c14)
+
 
 
 
