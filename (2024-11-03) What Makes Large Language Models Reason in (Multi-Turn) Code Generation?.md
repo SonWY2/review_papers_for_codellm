@@ -97,7 +97,11 @@ github: x
   - n개 제출은 public 테스트 성능 기반으로 선택
   - n=k인 경우 두 메트릭이 동일
 - 무조건 k를 늘리는 것은 계산적으로 최적이 아님.
-![image](https://github.com/user-attachments/assets/cd926768-89ec-4d65-83d0-915c804e79d1)
+
+![image](https://github.com/user-attachments/assets/a6016347-f04e-4af5-be15-9c6251989b1c)
+
+
+
 ** Llama 3.1 70B 의 code context 턴 수에 따른 pass rate **
 
 
